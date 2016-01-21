@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title></title>
+		<meta charset="utf-8">
+		<style>
+			body{
+				margin : 0px;
+			}
+			.backRect{
+				fill : transparent;
+			}
+			.backLine{
+				stroke : gray;
+				stroke-width : 1px;
+			}
+			.vertexLine{
+				stroke : green;
+				stroke-width : 5px;
+				fill:none;
+				cursor:pointer;
+			}
+			.vertexLine.selected{
+				stroke : red;
+				stroke-width : 5px;
+				cursor:pointer;
+			}
+			.vertexNode{
+				fill : yellow;
+				stroke : blue;
+				cursor : pointer;
+			}
+			.stationNode{
+				fill : black;
+				stroke : red;
+				cursor : pointer;
+			}
+			.stationNode.selected{
+				fill: red;
+				stroke:black;
+			}
+		</style>
+	</head>
+	<body>
+		<button onclick="drawLineEvent()">선그리기</button>
+		<button onclick="addVertexEvent()">vertex 추가</button>
+		<div id="svg"></div>
+		<script src="bower_components/d3/d3.min.js"></script>
+		<script>
+			var width = window.screen.width;
+			var height = window.screen.height;
+			var svg = d3.select('#svg').append('svg').attr('width',width).attr('height',height);
+			// console.log(d3.range(0,1000,5));
+			var scaleGroup = svg.append('g').on('mousedown',mouseDown);
+			var points = [];
+			var selectedPoint = [];
+			var vertexInfos = [];
+			var UID = 0;
+
+			var vertexLine = d3.svg.line().interpolate('linear')
+								.x(function(d){return d.datum().x;})
+								.y(function(d){return d.datum().y;});
+
+			var stationDrag = d3.behavior.drag()
+								.origin(function(d){return d;})
+								.on('dragstart',stationDragStarted)
+								.on('drag',stationDragged)
+								.on('dragend',stationDragEnded);
+
+			var vertexDrag = d3.behavior.drag()
+								.origin(function(d){return d;})
+								.on('dragstart',vertexDragStarted)
+								.on('drag',vertexDragged)
+								.on('dragend',vertexDragEnded);
+
+			var backRect = scaleGroup.append('rect').attr('class','backRect').attr('width',width).attr('height',height);
+
+			document.addEventListener('keydown',keyDown);
+			scaleGroup.selectAll('back')
+						.data(d3.range(0,height,10))
+						.enter()
+						.append('line')
+						.attr('x1',function(d){return d;})
+						.attr('y1', 0)
+						.attr('x2',function(d){return d;})
+						.attr('y2', svg.attr('width'))
+						.attr('class','backLine');
+			scaleGroup.selectAll('back')
+						.data(d3.range(0,width,10))
+						.enter()
+						.append('line')
+						.attr('x1',0)
+						.attr('y1',function(d){return d;})
+						.attr('x2',svg.attr('height'))
+						.attr('y2',function(d){return d;})
+						.attr('class','backLine');
+
+
+			function mouseDown(){
+				console.log('mouseDown');
+				var coord = d3.mouse(backRect.node());
+				points.push({
+					uid : UID++,
+					x : d3.round(coord[0],-1),
+					y : d3.round(coord[1],-1)
+				});
+				reDraw();
+			}
+			function keyDown(e){
+				console.log('keyDown : '+e.keyCode);
+				if(e.keyCode === 46){
+					points.pop();
+				}
+				console.log(points);
+				reDraw();
+			}
+			function drawLineEvent(){
+				console.log('drawLineEvent');
+				if(selectedPoint.length  >= 2){
+					var node1 = selectedPoint[0];
+					var node2 = selectedPoint[1];
+
+					vertexInfos.push({
+						startPoint : node1,
+						endPoint : node2,
+						points : [node1,node2],
+					});
+					drawVertexLine();
+				}
+			}
+
+			function addVertexEvent () {
+				var points = d3.select('.vertexLine.selected').datum().points;
+				addVertext(points);
+			}
+
+			function addVertext(points){
+				var max = points.length;
+				var addSize = 0;
+				var clone = points.slice(0);
+				for(var i = 0 ; i < max ; i++){
+					if(i+1 <= max-1){
+						points.splice(i+(addSize+1),0,makeVertexNode([{
+							x : (clone[i].datum().x + clone[i+1].datum().x)/2, 
+							y : (clone[i].datum().y + clone[i+1].datum().y)/2,
+							uid : UID++,
+						}]));
+						addSize++;
+					}
+				}
+
+			}
+			function makeVertexNode(objectList){
+				var node = scaleGroup.selectAll('vertexPoint')
+						.data(objectList)
+						.enter()
+						.append('circle')
+						.attr('cx',function(d){return d.x;})
+						.attr('cy',function(d){return d.y;})
+						.attr('r',10)
+						.attr('class','vertexNode')
+						.call(vertexDrag);
+
+				return node;
+			}
+
+			function vertextMouseDownEvent(){
+				d3.event.stopPropagation();
+				d3.selectAll('.vertexLine').classed('selected',false);
+				d3.select(this).classed('selected',true);
+			}
+			function stationDragStarted(d){
+				d3.event.sourceEvent.stopPropagation();
+				var target = d3.select(this);
+				console.log('nodeClick : '+target);
+				selectedPoint.push(target);
+
+				if(selectedPoint.length > 2){
+					selectedPoint[0].classed('selected',false);
+					selectedPoint.splice(0,1);
+				}
+
+				for (var i in selectedPoint){
+					selectedPoint[i].classed('selected',true);
+				}
+			}
+			function stationDragged(d){
+				d3.select(this)
+					.attr("cx", d.x = d3.round(d3.event.x,-1))
+					.attr("cy", d.y = d3.round(d3.event.y,-1));
+
+				d3.select('.vertexLine.selected')
+					.attr('d',function(d){return vertexLine(d.points);});
+			}
+			function stationDragEnded(d){}
+
+			function vertexDragStarted(d){
+				d3.event.sourceEvent.stopPropagation();
+				//Do stuff
+			}
+			function vertexDragged(d){
+				console.log('dragged');
+				d3.select(this)
+					.attr("cx", d.x = d3.event.x,-1)
+					.attr("cy", d.y = d3.event.y,-1);
+
+				d3.select('.vertexLine.selected')
+					.attr('d',function(d){return vertexLine(d.points);});
+				//Do stuff
+			}
+			function vertexDragEnded(d){
+				//Do stuff
+			}
+
+			function reDraw(){
+				d3.selectAll('.stationNode,vertexLine').remove();
+
+				drawVertexLine();
+				drawPoint();
+			}
+			function drawVertexLine(){
+				scaleGroup.append('g')
+					.selectAll('vertexLine')
+					.data(vertexInfos)
+					.enter()
+					.append('path')
+					.attr('class','vertexLine')
+					.attr('d',function(d){return vertexLine(d.points);})
+					.on('mousedown',vertextMouseDownEvent);
+			}
+			function drawPoint(){
+				var stationR = 5;
+				scaleGroup.selectAll('stationNode')
+					.data(points)
+					.enter()
+					.append('circle')
+					.attr('cx',function(d){return d.x;})
+					.attr('cy',function(d){return d.y;})
+					.attr('r',stationR)
+					.attr('class','stationNode')
+					.call(stationDrag);
+			}
+		</script>
+	</body>
+</html>

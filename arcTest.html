@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title></title>
+	</head>
+	<body>
+	<div id="arc"></div>
+		<script src="bower_components/d3/d3.min.js"></script>
+
+		<script>
+			var svg = d3.select('#arc').append('svg').attr('width',1000).attr('height',1000);
+
+			svg.append('path').attr('d',describeArc(200,200,100,270,360)).attr('stroke','black').attr('fill','none');
+
+			function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
+			  var angleInRadians = (angleInDegrees-90) * Math.PI / 180.0;
+
+			  return {
+			    x: centerX + (radius * Math.cos(angleInRadians)),
+			    y: centerY + (radius * Math.sin(angleInRadians))
+			  };
+			}
+
+			function describeArc(x, y, radius, startAngle, endAngle){
+
+			    var start = polarToCartesian(x, y, radius, endAngle);
+			    var end = polarToCartesian(x, y, radius, startAngle);
+
+			    var arcSweep = endAngle - startAngle <= 180 ? "0" : "1";
+
+			    var d = [
+			        "M", start.x, start.y, 
+			        "A", radius, radius, 0, arcSweep, 0, end.x, end.y
+			    ].join(" ");
+
+			    return d;       
+			}
+
+		</script>
+	</body>
+</html>
+
