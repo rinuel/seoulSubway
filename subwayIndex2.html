@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+
+<html>
+	<head>
+		<meta charset="utf-8">
+		<style>
+			body{
+				margin:0px;
+			}
+			.backRect{
+				fill:transparent;
+			}
+			.backLine{
+				stroke : gray;
+			}
+			.stationNode {
+				/*fill : black;*/
+				fill:white;
+				cursor : pointer;
+			}
+			.stationNode.select1{
+				fill : red;
+			}
+			.stationNode.select2{
+				fill : blue;
+			}
+			.vertexNode{
+				fill : #99FFFF;
+				cursor : pointer;
+			}
+			.link{
+				stroke-width : 13px;
+				fill : transparent;
+				cursor : pointer;
+			}
+			.link.select{
+				stroke : yellow;
+				fill : none;
+			}
+			.hide{
+				visibility:hidden;
+			}
+			.lastSelect{
+				storke : black;
+			}
+
+			div{
+				display:inline-block;
+				vertical-align: top;
+				-webkit-box-sizing: border-box;
+			       -moz-box-sizing: border-box;
+			            box-sizing: border-box;
+			}
+
+		</style>
+	</head>
+	<body>
+		<div id="subway" style="width:80%; border:1px solid;"></div>
+		<div style="width:19%; border:1px solid;">
+			<select id="colorSel" style="color:#08CA00;">
+				<option value="#08CA00" style="color:#08CA00">#08CA00</option>
+				<option value="#FF0000" style="color:#FF0000">#FF0000</option>
+				<option value="#FCCE00" style="color:#FCCE00">#FCCE00</option>
+			</select>
+			<button onclick="drawLinkEvent()">선그리기</button>
+			<button onclick="addVertexEvent()">Vertex 추가</button>
+			<button onclick="exportDataEvent()">Data export</button>
+			<table>
+				<tr>
+					<td>역 ID</td>
+					<td><input id="stnId" type="text"></td>	
+				</tr>
+				<tr>
+					<td>역이름</td>
+					<td><input id="stnNm" type="text"></td>	
+				</tr>
+				<tr>
+					<td colspan="2"><button onclick="addStationInfoEvent()">적용</button></td>
+				</tr>
+			</table>
+		</div>
+
+	<script src="bower_components/d3/d3.min.js"></script>
+	<script src="js/tooltip.js"></script>
+	<script>
+		var screenWidth = window.screen.width * 80 / 100;
+		var screenHeight = window.screen.height * 80 / 100;
+		var svg = null; 
+		var UID = 0;
+		var WEIGHT = {
+			station : 2,
+			link : 1,
+			vertex : 3,
+		}
+
+		var stationDrag = d3.behavior.drag()
+					.origin(function(d){return d;})
+					.on('dragstart',stationDragStarted)
+					.on('drag',stationDragged)
+					.on('dragend',stationDragEnded);
+
+		var vertexDrag = d3.behavior.drag()
+							.origin(function(d){return d;})
+							.on('dragstart',vertexDragStarted)
+							.on('drag',vertexDragged)
+							.on('dragend',vertexDragEnded);
+
+		var linkLine = d3.svg.line().interpolate('linear')
+				.x(function(d){return d.datum().x;})
+				.y(function(d){return d.datum().y;});
+
+		init();
+
+		function init(){
+
+			svg = d3.select('#subway').append('svg').attr('width',screenWidth).attr('height',screenHeight).append('g');
+			svg.selectAll('line1')
+				.data(d3.range(0,screenHeight,10))
+				.enter()
+				.append('line')
+				.attr('x1',0)
+				.attr('y1',function(d){return d;})
+				.attr('x2',screenWidth)
+				.attr('y2',function(d){return d;})
+				.attr('class','backLine');
+
+			svg.selectAll('line2')
+				.data(d3.range(0,screenWidth,10))
+				.enter()
+				.append('line')
+				.attr('x1',function(d){return d;})
+				.attr('y1',0)
+				.attr('x2',function(d){return d;})
+				.attr('y2',screenHeight)
+				.attr('class','backLine');
+			svg.append('rect').attr('class','backRect').attr('width',screenWidth).attr('height',screenHeight).on('mousedown',backClickEvent);
+
+			document.getElementById('colorSel').addEventListener('change',function(e){
+				this.style.color = this.value;
+			});
+			document.addEventListener('keydown',keyDownEvent);
+		}
+		/********************************** Button Events *************************************/
+		function drawLinkEvent (e) {
+			var node1 = d3.select('.stationNode.select1');
+			var node2 = d3.select('.stationNode.select2');
+			if(!node1.empty() && !node2.empty()){
+				var link ={
+					node1: node1,
+					node2: node2,
+					vertexes : [node1,node2],
+					color : document.getElementById('colorSel').value || 'black',
+					type : 'link',
+				};
+				var link_svg = svg.selectAll('link')
+					.data([link])
+					.enter()
+					.append('path')
+					.attr('d',function(d){return linkLine(d.vertexes)})
+					.attr('stroke',function(d){return d.color;})
+					.attr('class','link')
+					.on('mousedown',linkClickEvent);
+
+				node1.datum().links.push(link_svg);
+				node2.datum().links.push(link_svg);
+
+				//svg 요소 재정렬
+				reSorting();
+			}else{
+				alert('정류장 두개를 선택해주세요');
+			}
+
+		}
+		function addVertexEvent (e) {
+			var link = d3.select('.link.select');
+			if(!link.empty()){
+				addVertext(link.datum().vertexes);
+			}else{
+				alert('선택된 링크가 없습니다.');
+			}
+		}
+
+		function addStationInfoEvent(){
+			var stnId = document.getElementById('stnId').value;
+			var stnNm = document.getElementById('stnNm').value;
+			var selectNode = d3.select('.stationNode.select1');
+			if(!selectNode.empty() && selectNode.datum().type === 'station'){
+				selectNode.datum().info = {
+					stnId : stnId,
+					stnNm : stnNm,
+				};
+			}else{
+				alert('선택된 노드가 없습니다.');
+			}	
+		}
+
+		function exportDataEvent(){
+			var stations = d3.selectAll('.stationNode'); 
+			var links = d3.selectAll('.links');
+			var vertexes = d3.selectAll('.vertexes');
+
+			console.log('stations');
+			stations.forEach(function(value){ console.log(d3.select(value).datum()); });
+			console.log('links');
+			console.log(links);
+			console.log('vertexes');
+			console.log(vertexes);
+
+		}
+
+		/********************************** Click Events **************************************/
+		function backClickEvent(e){
+			var coord = d3.mouse(d3.select('.backRect').node());
+
+			//정류장 노드 추가
+			var point = {
+				uid : UID++,
+				x : d3.round(coord[0],-1),
+				y : d3.round(coord[1],-1),
+				type : 'station',
+				links : [],
+				info :{}
+			};
+			svg.selectAll('stationNode')
+				.data([point])
+				.enter()
+				.append('circle')
+				.attr('cx',function(d){return d.x;})
+				.attr('cy',function(d){return d.y;})
+				.attr('r', 5)
+				.attr('class','stationNode')
+				.call(stationDrag)
+				.call(d3.helper.tooltip()
+	                .style({color: 'blue'})
+	                .text(function(d, i){
+	                	var text = 'x: '+d.x+', y: '+d.y+', 정류장명: '+nvl(d.info.stnNm)+', 정류장ID: '+nvl(d.info.stnId);
+	                	return text;
+	             	})
+	            );
+
+			//svg 요소 재정렬
+			reSorting();
+
+		}
+		//링크 클릭 이벤트
+		function linkClickEvent(e){
+			//모든 버텍스 지우기
+			d3.selectAll('.vertexNode').classed('hide',true);
+			//모든 링크 선택 해제
+			d3.selectAll('.link').classed('select',false);
+			//마지막 클릭 초기화
+			d3.selectAll('.lastSelect').classed('lastSelect',false);
+			//현재 클릭 링크 선택.
+			d3.select(this).classed('select',true).classed('lastSelect',true)
+				.datum().vertexes.forEach(function(value){value.classed('hide',false);});
+		}
+		//정류장 클릭 이벤트
+		function stationDragStarted(d){
+			//이벤트 막고.
+			d3.event.sourceEvent.stopPropagation();
+			var target = d3.select(this);
+			console.log('nodeClick : '+target);
+
+			//첫번째 선택 노드가 있다면
+			if(!d3.select('.stationNode.select1').empty()){
+				//첫번쨰 두번째 선택노드가 둘다 있다면
+				if(!d3.select('.stationNode.select2').empty()){
+					d3.select('.stationNode.select1').classed('select1',false);
+					d3.select('.stationNode.select2').classed('select2',false).classed('select1',true);
+					target.classed('select2',true);
+					console.log('첫번째');
+				}else{
+					target.classed('select2',true);
+					console.log('두번째');
+				}
+			//현재 선택된 노드가 아무것도 없다면.
+			}else{
+				target.classed('select1',true);
+				console.log('세번째');
+			}
+
+			//마지막 클릭 초기화
+			d3.selectAll('.lastSelect').classed('lastSelect',false);
+			target.classed('lastSelect',true);
+
+			//오른쪽 폼에 데이터 갱신
+			document.getElementById('stnId').value = target.datum().info.stnId || '' ;
+			document.getElementById('stnNm').value = target.datum().info.stnNm || '' ;
+		}
+
+		//버텍스 클릭 이벤트.
+		function vertexDragStarted(d){
+			d3.event.sourceEvent.stopPropagation();
+			var target = d3.select(this);
+			//마지막 클릭 초기화
+			d3.selectAll('.lastSelect').classed('lastSelect',false);
+			//마지막 클릭 초기화
+			target.classed('lastSelect',true);
+		}
+		/*********************************** Key Events *******************************************/
+		function keyDownEvent(e){
+			console.log(e.keyCode)
+			var keyCode = e.keyCode;
+			// 'l' 키
+			if(keyCode === 76){
+				drawLinkEvent();
+			// 'v' 키
+			}else if(keyCode === 86){
+				addVertexEvent();
+			// 'delete' 키
+			}else if(keyCode === 46){
+				d3.select('.lastSelect').remove();
+			}
+		}
+		/*********************************** Util Function ****************************************/
+		function reSorting(){
+			console.log('재정렬');
+			d3.selectAll('.stationNode,.link,.vertexNode').sort(function(a,b){
+				if(WEIGHT[a.type] > WEIGHT[b.type]){
+					return 1;
+				}else if(WEIGHT[a.type] < WEIGHT[b.type]){
+					return -1;
+				}else{
+					return 0;
+				}
+			});
+		}
+
+		function addVertext(vertexes){
+			var max = vertexes.length;
+			var addSize = 0;
+			var clone = vertexes.slice(0);
+			for(var i = 0 ; i < max ; i++){
+				if(i+1 <= max-1){
+					vertexes.splice(i+(addSize+1),0,makeVertext([{
+						x : (clone[i].datum().x + clone[i+1].datum().x)/2, 
+						y : (clone[i].datum().y + clone[i+1].datum().y)/2,
+						type : 'vertex',
+					}]));
+					addSize++;
+				}
+			}
+		}
+		function makeVertext(objectList){
+			var node = svg.selectAll('vertexPoint')
+					.data(objectList)
+					.enter()
+					.append('circle')
+					.attr('cx',function(d){return d.x;})
+					.attr('cy',function(d){return d.y;})
+					.attr('r',3)
+					.attr('class','vertexNode')
+					.call(vertexDrag)
+					.call(d3.helper.tooltip()
+	                	.style({color: 'blue'})
+	                	.text(function(d, i){ return 'x: '+d.x+', y: '+d.y; })
+	            	);
+
+			return node;
+		}
+
+		function nvl(str){
+			return str || 'empty';
+		}
+
+		/*********************************** Drag Events **************************************/
+		function stationDragged(d){
+			d3.select(this)
+				.attr("cx", d.x = d3.round(d3.event.x,-1))
+				.attr("cy", d.y = d3.round(d3.event.y,-1))
+				.datum()
+				.links.forEach(function(value,index,arr){
+					value.attr('d',function(d){return linkLine(d.vertexes);});
+				});
+
+		}
+		function stationDragEnded(d){}
+
+		function vertexDragged(d){
+			d3.select(this)
+				.attr("cx", d.x = d3.event.x,-1)
+				.attr("cy", d.y = d3.event.y,-1);
+
+			d3.select('.link.select')
+				.attr('d',function(d){return linkLine(d.vertexes);});
+			//Do stuff
+		}
+		function vertexDragEnded(d){
+			//Do stuff
+		}
+
+
+	</script>
+	</body>
+</html>
