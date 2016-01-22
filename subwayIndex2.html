@@ -142,6 +142,7 @@
 		}
 		/********************************** Button Events *************************************/
 		function drawLinkEvent (e) {
+			console.log('drawLink');
 			var node1 = d3.select('.stationNode.select1');
 			var node2 = d3.select('.stationNode.select2');
 			if(!node1.empty() && !node2.empty()){
@@ -165,6 +166,7 @@
 
 		}
 		function addVertexEvent (e) {
+			console.log('addVertexEvent');
 			var link = d3.select('.link.select');
 			if(!link.empty()){
 				drawVertexNode(link.datum().vertexes);
@@ -174,6 +176,8 @@
 		}
 
 		function addStationInfoEvent(){
+			console.log('addStationInfoEvent');
+
 			var stnId = document.getElementById('stnId').value;
 			var stnNm = document.getElementById('stnNm').value;
 			var selectNode = d3.select('.stationNode.select1');
@@ -188,6 +192,8 @@
 		}
 
 		function exportDataEvent(){
+			console.log('exportDataEvent');
+
 			var stations = d3.selectAll('.stationNode'); 
 			var links = d3.selectAll('.links');
 			var vertexes = d3.selectAll('.vertexes');
@@ -203,6 +209,7 @@
 
 		/********************************** Click Events **************************************/
 		function backClickEvent(e){
+			console.log('backClickEvent');
 			var coord = d3.mouse(d3.select('.backRect').node());
 
 			//정류장 노드 추가
@@ -229,6 +236,7 @@
 		}
 		//링크 클릭 이벤트
 		function linkClickEvent(e){
+			console.log('linkClickEvent');
 			//모든 버텍스 지우기
 			d3.selectAll('.vertexNode').classed('hide',true);
 			//모든 링크 선택 해제
@@ -244,7 +252,7 @@
 			//이벤트 막고.
 			d3.event.sourceEvent.stopPropagation();
 			var target = d3.select(this);
-			console.log('nodeClick : '+target);
+			console.log('stationDragStarted : '+target);
 
 			//첫번째 선택 노드가 있다면
 			if(!d3.select('.stationNode.select1').empty()){
@@ -275,6 +283,7 @@
 
 		//버텍스 클릭 이벤트.
 		function vertexDragStarted(d){
+			console.log('vertexDragStarted');
 			d3.event.sourceEvent.stopPropagation();
 			var target = d3.select(this);
 			//마지막 클릭 초기화
@@ -284,10 +293,13 @@
 		}
 		/*********************************** Draw Function ****************************************/
 		function drawStationNode(stationNode){
+			console.log('drawStationNode');
+
 			var gNode = svg.selectAll('stationNode')
 				.data([stationNode])
 				.enter()
 				.append('g')
+				.attr('class','stationNode')
 				.attr('transform',function(d){
 					return 'translate('+d.x+','+d.y+')';
 				})
@@ -303,8 +315,7 @@
 			gNode.append('circle')
 				.attr('cx',0)
 				.attr('cy',0)
-				.attr('r', 5)
-				.attr('class','stationNode');
+				.attr('r', 5);
 
 	        gNode.append('text')
 	        	.text(function(d){return d.info.nameText || '';})
@@ -316,6 +327,7 @@
 	        return gNode;
 	    }
 		function drawLink(link){
+			console.log('drawLink');
 			var line = svg.selectAll('link')
 				.data([link])
 				.enter()
@@ -328,7 +340,7 @@
 			return line;
 		}
 		function drawVertexNode(vertexes){
-
+			console.log('drawVertexNode');
 			var max = vertexes.length;
 			var addSize = 0;
 			var clone = vertexes.slice(0);
@@ -344,6 +356,7 @@
 			}
 
 			function makeVertext(objectList){
+				console.log('makeVertext');
 				var node = svg.selectAll('vertexPoint')
 						.data(objectList)
 						.enter()
@@ -363,6 +376,7 @@
 		}
 		/*********************************** Key Events *******************************************/
 		function keyDownEvent(e){
+			console.log('keyDownEvent');
 			console.log(e.keyCode)
 			var keyCode = e.keyCode;
 			// 'l' 키
@@ -378,7 +392,7 @@
 		}
 		/*********************************** Util Function ****************************************/
 		function reSorting(){
-			console.log('재정렬');
+
 			d3.selectAll('.stationNode,.link,.vertexNode').sort(function(a,b){
 				if(WEIGHT[a.type] > WEIGHT[b.type]){
 					return 1;
@@ -395,6 +409,7 @@
 
 		/*********************************** Drag Events **************************************/
 		function stationDragged(d){
+			console.log('stationDragged');
 			d3.select(this)
 				.attr('transform',function(d){
 					d.x = d3.round(d3.event.x,-1);
@@ -407,9 +422,12 @@
 				});
 
 		}
-		function stationDragEnded(d){}
+		function stationDragEnded(d){
+			console.log('stationDragEnded');
+		}
 
 		function vertexDragged(d){
+			console.log('vertexDragged');
 			d3.select(this)
 				.attr("cx", d.x = d3.event.x,-1)
 				.attr("cy", d.y = d3.event.y,-1);
@@ -419,6 +437,7 @@
 			//Do stuff
 		}
 		function vertexDragEnded(d){
+			console.log('vertexDragEnded');
 			//Do stuff
 		}
 
