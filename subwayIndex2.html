@@ -7,42 +7,17 @@
 			body{
 				margin:0px;
 			}
-			.backRect{
-				fill:transparent;
-			}
-			.backLine{
-				stroke : gray;
-			}
-			.stationNode {
-				/*fill : black;*/
-				fill:white;
-				cursor : pointer;
-			}
-			.stationNode.select1{
-				fill : red;
-			}
-			.stationNode.select2{
-				fill : blue;
-			}
-			.vertexNode{
-				fill : coral;
-				cursor : pointer;
-			}
-			.link{
-				stroke-width : 13px;
-				fill : transparent;
-				cursor : pointer;
-			}
-			.link.select{
-				stroke : yellow;
-				fill : none;
-			}
-			.hide{
-				visibility:hidden;
-			}
-			.lastSelect{
-				stroke : black;
-			}
+			.backRect{ fill:transparent;	}
+			.backLine{ stroke : gray;	}
+			.stationNode circle{/*fill : black;*/fill:white;cursor : pointer;}
+			.stationNode.select1 circle{fill : red;	}
+			.stationNode.select2 circle{fill : blue;}
+			.stationNode text{ font-family: sans-serif;	}
+			.vertexNode{fill : coral;cursor : pointer;	}
+			.link{stroke-width : 13px;fill : transparent;cursor : pointer;}
+			.link.select{stroke : yellow;fill : none;}
+			.hide{visibility:hidden;}
+			.lastSelect{stroke : black;}
 
 			div{
 				display:inline-block;
@@ -180,12 +155,11 @@
 
 			var stnId = document.getElementById('stnId').value;
 			var stnNm = document.getElementById('stnNm').value;
-			var selectNode = d3.select('.stationNode.select1');
+			var selectNode = d3.select('.stationNode.lastSelect');
 			if(!selectNode.empty() && selectNode.datum().type === 'station'){
-				selectNode.datum().info = {
-					stationId : stnId,
-					nameText : stnNm,
-				};
+				selectNode.datum().info.stationId = stnId;
+				selectNode.datum().info.nameText = stnNm;
+				selectNode.select('text').text(stnNm);
 			}else{
 				alert('선택된 노드가 없습니다.');
 			}	
@@ -204,7 +178,6 @@
 			console.log(links);
 			console.log('vertexes');
 			console.log(vertexes);
-
 		}
 
 		/********************************** Click Events **************************************/
@@ -222,7 +195,7 @@
 				info :{
 					nameText : '',
 					nameX: 0,
-					nameY: 0,
+					nameY: 20,
 					nameRotate: 0,
 					nameAnchor: 'middle',
 					stationId : 0,
@@ -277,8 +250,8 @@
 			target.classed('lastSelect',true);
 
 			//오른쪽 폼에 데이터 갱신
-			document.getElementById('stnId').value = target.datum().info.stnId || '' ;
-			document.getElementById('stnNm').value = target.datum().info.stnNm || '' ;
+			document.getElementById('stnId').value = target.datum().info.stationId || '' ;
+			document.getElementById('stnNm').value = target.datum().info.nameText || '' ;
 		}
 
 		//버텍스 클릭 이벤트.
@@ -318,9 +291,9 @@
 				.attr('r', 5);
 
 	        gNode.append('text')
-	        	.text(function(d){return d.info.nameText || '';})
+	        	.text(function(d){return d.info.nameText || 'empty';})
 	        	.attr('x',function(d){return d.info.nameX || 0;})
-	        	.attr('y',function(d){return d.info.nameY || 0;})
+	        	.attr('y',function(d){return d.info.nameY || 20;})
 	        	.attr('text-anchor',function(d){return d.info.nameAnchor || 'middle';})
 	        	.attr('transform',function(d){return 'rotate('+(d.info.nameRotate || 0)+')';});
 
@@ -388,6 +361,63 @@
 			// 'delete' 키
 			}else if(keyCode === 46){
 				d3.select('.lastSelect').remove();
+			// 'a' 키
+			}else if(keyCode === 65){
+				var node = d3.select('.stationNode.lastSelect');
+				if(!node.empty()){
+					node.datum().info.nameX -= 1;
+					node.select('text').attr('x',function(d){return d.info.nameX;});
+				}
+			// 'w' 키
+			}else if(keyCode === 87){
+				var node = d3.select('.stationNode.lastSelect');
+				if(!node.empty()){
+					node.datum().info.nameY -= 1;
+					node.select('text').attr('y',function(d){return d.info.nameY;});
+				}
+			// 'd' 키	
+			}else if(keyCode === 68){
+				var node = d3.select('.stationNode.lastSelect');
+				if(!node.empty()){
+					node.datum().info.nameX += 1;
+					node.select('text').attr('x',function(d){return d.info.nameX;});
+				}
+			// 's' 키	
+			}else if(keyCode === 83){
+				var node = d3.select('.stationNode.lastSelect');
+				if(!node.empty()){
+					node.datum().info.nameY += 1;
+					node.select('text').attr('y',function(d){return d.info.nameY;});
+				}
+			// 'q' 키
+			}else if(keyCode === 81){
+				var node = d3.select('.stationNode.lastSelect');
+				if(!node.empty()){
+					node.datum().info.nameRotate += 1;
+					node.select('text').attr('transform',function(d){
+						return 'rotate('+d.info.nameRotate+')';
+					});
+				}
+			// 'e' 키
+			}else if(keyCode === 69){
+				var node = d3.select('.stationNode.lastSelect');
+				if(!node.empty()){
+					node.datum().info.nameRotate -= 1;
+					node.select('text').attr('transform',function(d){
+						return 'rotate('+d.info.nameRotate+')';
+					});
+				}
+			// 'left arrow' 키
+			}else if(keyCode === 37){
+			// 'up arrow' 키
+			}else if(keyCode === 38){
+
+			// 'right arrow' 키	
+			}else if(keyCode === 39){
+
+			// 'down arrow' 키	
+			}else if(keyCode === 40){
+
 			}
 		}
 		/*********************************** Util Function ****************************************/
