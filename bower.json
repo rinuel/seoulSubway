@@ -12,7 +12,9 @@
   "license": "MIT",
   "private": true,
   "dependencies": {
-    "d3": "~3.5.12"
+    "d3": "~3.5.12",
+    "jquery": "~2.2.0",
+    "jquery-ui": "~1.11.4"
   },
   "devDependencies": {
     "d3": "~3.5.12"
