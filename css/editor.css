@@ -1,0 +1,31 @@
+.checkerLine{
+	stroke : gray;
+}
+.cursor{
+	width:10px;
+	height:10px;
+	stroke : red;
+	fill : transparent;
+}
+.node circle{
+	fill : blue;
+	cursor :pointer;
+}
+.vertex{
+
+}
+.link{
+	stroke : yellow;
+	stroke-width:3px;
+	cursor : pointer;
+}
+.link.selected{
+	stroke : black;
+}
+.node.preSelected circle{
+	fill : black;
+}
+.node.selected circle{
+	fill:red;
+	stroke : black;
+}

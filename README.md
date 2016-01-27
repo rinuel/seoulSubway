@@ -23,7 +23,7 @@
 	- vertex : 버텍스
 	- type: 타입
 
-#vertex
+#VERTEX
 	- uid(key) : 키
 	- points : 
 		-x : X좌표 , -y : Y좌표

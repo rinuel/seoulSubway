@@ -4,29 +4,15 @@
 	<head>
 		<meta charset="utf-8">
 		<title></title>
-		<style>
-			.line2{
-				stroke : #2ECC71;
-				stroke-width : 5;
-				fill : none;
-			}
-			.subNode{
-				fill : white;
-			}
-			.subName{
-				font-family: sans-serif;
-				font-size: 10px;
-				fill : black;
-				text-anchor : middle;
-			}
-		</style>
+		<link rel="stylesheet" href="css/editor.css">
 	</head>
 	<body>
 		<div id="subway"></div>
 		<script src="bower_components/d3/d3.min.js"></script>
-		<script src="subway.js"></script>
+		<script src="js/JDSubway.js"></script>
 		<script>
-			mindAll.subway();
+			var editor = JDSubway.Editor('#subway');
+			
 		</script>
 	</body>
 </html>
