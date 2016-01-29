@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title></title>
+		<meta charset="utf-8">
+		<link rel="stylesheet" href="bower_components/d3-context-menu/css/d3-context-menu.css" />
+		<style>
+			.backRect{
+				fill : gray;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="svg"></div>
+		<script src="bower_components/d3/d3.min.js"></script>
+		<script src="bower_components/d3-context-menu/js/d3-context-menu.js"></script>
+		<script>
+			var svg = d3.select('#svg').append('svg').attr('width',1000).attr('height',1000).append('g');
+			var rect = svg.append('rect').attr('width',1000).attr('height',1000).attr('class','backRect');
+			var menu = [
+				{
+					title: 'item #1',
+					action : function(elm,d,i){
+						console.log('item1 click');
+					}
+				},
+				{
+					title : 'itme #2',
+					action : function(elm,d,i){
+						console.log('item2 click');
+					}
+				}
+			];
+			rect.on('contextmenu',d3.contextMenu(menu));
+		</script>
+
+	</body>
+</html>
