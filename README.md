@@ -4,10 +4,12 @@
 # OBJECT
 ##NODE(circle)
 	- uid(key):  키
+	- id : 정류장 ID
 	- x: X좌표
 	- y: Y좌표
 	- info : 추가정보
 	- type : 타입
+	- link : 링크
 	- textInfo : {
 		x: 상대 x좌표
 		y: 상대 y좌표

@@ -9,10 +9,16 @@
 	stroke-width:2px;
 	fill : transparent;
 }
-.node circle{
-	fill : blue;
+.node .subway{
+	fill : white;
+	stroke : black;
 	cursor :pointer;
 }
+.node .nodeName{
+	font-size:15px;
+	font-family: sans-serif;
+}
+
 .vertex{
 	fill : orange;
 	cursor:pointer;
@@ -21,14 +27,14 @@
 	stroke : black;
 }
 .link{
-	stroke : yellow;
+	stroke : #2ECC71;
 	stroke-width:5px;
 	fill:none;
 	cursor : pointer;
 }
 .link.selected{
-	stroke : black;
-}
+	stroke : black !important;
+} 
 .node.preSelected circle{
 	fill : black;
 }
