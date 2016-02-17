@@ -17,6 +17,7 @@
 .node .nodeName{
 	font-size:15px;
 	font-family: sans-serif;
+	pointer-events : none;
 }
 
 .vertex{
@@ -78,11 +79,47 @@
 }
 
 /* inputBox */
-.inputBox{
+/*.inputBox{
 	position:absolute;
-	display:none;
-	min-width: 250px;
-	border-style: groove;
-	border-width: 3px;
-	background-color: white;
+	font-family: Arial,Helvetica,sans-serif;
+	top : 0;
+	right : 0;
+	left :0;
+	bottom:0;
+	background: rgba(0,0,0,0.8);
+	z-index: 99999;
+	pointer-events: none;
+}*/
+a.close{
+	float:right;
+	margin-top: -30;
+	/*margin-right : -30px;*/
+    cursor:pointer;
+    color: #fff;
+    /*border: 1px solid #AEAEAE;
+    border-radius: 30px;
+    background: #605F61;*/
+    font-size: 31px;
+    font-weight: bold;
+    display: inline-block;
+    line-height: 0px;
+    padding: 0px 3px; 
+ 	text-decoration: none;
+}
+.close:before{
+	content: "x";
+}
+.inputBox:target{
+	opacity: 0.5;
+}
+.inputBox{
+	width:270px;
+	position: absolute;
+	/*margin: 10% auto;*/
+	padding : 10px 10px 13px 20px;
+	border-radius: 10px;
+	background:#fff;
+	background: -moz-linear-gradient(#fff, #999);
+	background: -webkit-linear-gradient(#fff, #999);
+	background: -o-linear-gradient(#fff, #999);
 }

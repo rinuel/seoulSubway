@@ -1,5 +1,5 @@
-//tooltip
 (function(){
+	//tooltip
 	d3.helper = {};
 
 	d3.helper.tooltip = function(){
@@ -66,30 +66,20 @@
 	    };
 	    return tooltip;	
 	}
-})();
 
-//inputBox
-(function(root, factory){
-	if (typeof module === 'object' && module.exports) {
-		module.exports = function(d3) {
-			d3.inputBox = factory(d3);
-			return d3.inputBox;
-		};
-	} else {
-		root.d3.inputBox = factory(root.d3);
-	}
+	//inputBox
+	d3.helper.inputBox = function(okCallback,inputList,opts){
 
-})(this,
-	function(d3){
-	return function(okCallback,inputList,opts){
-  		var inputBox = d3.selectAll('.inputBox').data([1]).enter().append('div')
-  		  .attr('class','inputBox').style('display','none');
+		var inputBox = d3.selectAll('.inputBox')
+		  	.data([1]).enter().append('div')
+  		  	.attr('class','inputBox').style('display','none');
 
   		d3.select('body').on('click.inputBox',function(e){
   			d3.select('.inputBox').style('display','none');
   		});
 
-  		var html = '<form id="inputBoxForm">';
+  		var html = '<a href="#close" title="Close" class="close"></a>';
+  			html += '<form id="inputBoxForm">';
   			html += '<table>';
   			inputList.forEach(function(v,i,a){
   				html += '<tr>';
@@ -121,8 +111,8 @@
   		  		document.getElementById('inputBoxForm').getElementsByTagName('input')[0].focus();
   		  	}
   		}
-	}
-});
+	};
+})();
 
 // //contextMenu
 // //@author patorjk

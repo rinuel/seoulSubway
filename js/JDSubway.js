@@ -8,9 +8,13 @@ var JDSubway = (function(){
   	var cursorFlag = true;
   	var lineWidth = 20;
   	//링크 라인 path 생성 함수
-  	var linkLine = d3.svg.line().interpolate('basis')
-					.x(function(d){return d.x; })
-					.y(function(d){return d.y; });
+  	var linkLine = function(lineTy){
+  					return {getLinePath : d3.svg.line()
+		  					.interpolate(lineTy)
+							.x(function(d){return d.x; })
+							.y(function(d){return d.y; })
+					};
+	};
 	var lineColorDic = {
 		1 : '#2980B9',
 		2 : '#27AE60',
@@ -30,18 +34,14 @@ var JDSubway = (function(){
 		cursor : 4,
 	};
 	//노드 데이터 객체
-  	var _node = function(param){
-  		var maxUid = d3.max(d3.selectAll('.node')[0],function(d){
-  			return d3.select(d).datum().uid;
-  		});
-
-  		this.uid = param.uid === undefined ? ++maxUid || 0: param.uid;
+  	var Node = function(param){
+  		this.uid = param.uid === undefined ? (getMaxUid('node')+1) || 0: param.uid;
   		this.id = param.id === undefined ? 0 : param.id;
-  		this.x = param.x === undefined ? x : param.x;
-  		this.y = param.y === undefined ? y : param.y;
+  		this.x = param.x === undefined ? 0 : param.x;
+  		this.y = param.y === undefined ? 0 : param.y;
+  		this.link = param.link || [];
   		this.info = param.info || {};
   		this.type = param.type || 'node';
-  		this.link = param.link || [];
   		this.textInfo = param.textInfo || {
   			x : 0,
   			y : -10,
@@ -50,73 +50,96 @@ var JDSubway = (function(){
   			text : 'empty',
   			textSize : 15,
   		};
-  		this.delete = function(){
-  			d3.select('#node'+this.uid).remove();
-  			this.link.forEach(function(v,i,a){
-  				var target = d3.select('.link#link'+v);
-  				target.datum().delete();
-  			});
-  		};
    	}
    	//링크 데이터 객체
-  	var _link = function(param){
-  		var maxUid = d3.max(d3.selectAll('.link')[0],function(d){
-  			return d3.select(d).datum().uid;
-  		});
+  	var Link = function(param){
 
-  		this.uid = param.uid === undefined ? ++maxUid || 0 : param.uid;
+  		this.uid = param.uid === undefined ? (getMaxUid('link')+1) || 0 : param.uid;
   		this.node1 = param.node1 === undefined ? '' : param.node1;
   		this.node2 = param.node2 === undefined ? '' : param.node2;
-  		this.vertex = param.vertex || [];
   		this.lineNo = param.lineNo || 1;
+  		this.lineTy = param.lineTy || 'basis';
+  		this.vertex = param.vertex || [];
   		this.type = param.type || 'link';
-
-  		this.getPoints = function(){
-  			var points = [];
-  			//첫째노드 포인트.
-  			var point = d3.select('.node#node'+this.node1);
-  			console.log('.node#node'+this.node1);
-  			points.push({x:point.datum().x,y:point.datum().y});
-  			//버텍스 포인트 들.
-  			this.vertex.forEach(function(v,i,a){
-  				point = d3.select('.vertex#vertex'+v)
-  				points.push({x:point.datum().x , y:point.datum().y});
-  			});
-  			//목적노드 포인트.
-  			point = d3.select('.node#node'+this.node2);
-  			points.push({x:point.datum().x,y:point.datum().y});
-  			return points;	
-  		};
-  		this.delete = function(){
-  			d3.select('#link'+this.uid).remove();
-  			this.vertex.forEach(function(v,i,a){
-  				var target = d3.select('.vertex#vertex'+v);
-  				target.datum().delete();
-  			});
-  		};
   	}
-  	//버텍스 데이터 객체
-  	var _vertex = function(param){
-  		var maxUid = d3.max(d3.selectAll('.vertex')[0],function(d){
-  			return d3.select(d).datum().uid;
-  		});
 
-  		this.uid = param.uid === undefined ? ++maxUid || 0 : param.uid;
-  		this.x = param.x === undefined ? x : param.x;
-  		this.y = param.y === undefined ? y : param.y;
+	Link.prototype.getPoints = function(){
+		var points = [];
+		//첫째노드 포인트.
+		var point = d3.select('.node#node'+this.node1);
+
+		points.push({x:point.datum().x,y:point.datum().y});
+		//버텍스 포인트 들.
+		this.vertex.forEach(function(v,i,a){
+			point = d3.select('.vertex#vertex'+v)
+			points.push({x:point.datum().x , y:point.datum().y});
+		});
+		//목적노드 포인트.
+		point = d3.select('.node#node'+this.node2);
+		points.push({x:point.datum().x,y:point.datum().y});
+
+		return points;	
+	};
+  	//버텍스 데이터 객체
+  	var Vertex = function(param){
+  		this.uid = param.uid === undefined ? (getMaxUid('vertex')+1) || 0 : param.uid;
+  		// this.link = param.link === undefined ? 0 : param.link;
+  		this.x = param.x === undefined ? 0 : param.x;
+  		this.y = param.y === undefined ? 0 : param.y;
   		this.type = param.type || 'vertex';
-  		this.delete = function(){
-  			d3.select('#vertex'+this.uid).remove();
-  		}
   	}
   	// Private Methods
   	///////////////////////////
+  	//
+  	function removeSVG(d3_selection){
+  		var type = d3_selection.datum().type;
+  		d3_selection.remove();
+  		if(type === 'node'){
+			d3_selection.datum().link.forEach(function(v,i,a){
+				removeSVG(d3.select('.link#link'+v));
+			});
+  		}else if(type === 'link'){
+			d3_selection.datum().vertex.forEach(function(v,i,a){
+				removeSVG(d3.select('.vertex#vertex'+v));
+			});
+  		}else if(type === 'vertex'){
+  		}
+  	}
+  	//
+  	function moveNodeText(d3_selection,dx,dy){
+  		//좌표이동.
+  		d3_selection
+  				.attr('y',function(d){return d.textInfo.y += dy;})
+  				.selectAll('tspan')
+  		  		.attr('x',function(d){ return d.textInfo.x += dx;});
+  	}
+  	//text 라인 나누기.
+  	function insertLinebreaks (d) {
+	    var el = d3.select(this);
+	    var words = d.textInfo.text.split(' ');
+	    el.text('');
+
+	    for (var i = 0; i < words.length; i++) {
+	        var tspan = el.append('tspan').attr('x',function(d){return d.textInfo.x;})
+	        				.text(words[i]);
+	        if (i > 0)
+	            tspan.attr('dy', '15');
+	    }
+	};
+  	//최대 uid 를 구함.
+  	function getMaxUid(className){
+  		var maxUid = d3.max(d3.selectAll('.'+className)[0],function(d){
+  			return d3.select(d).datum().uid;
+  		});
+
+  		return maxUid;
+  	}
   	//10이하 수 반올림 함수.
-  	var div10 = function(number){
+  	function div10(number){
   		return d3.round(number / lineWidth,0) * lineWidth;
   	}
   	//x,y 좌표를 translate 스트링으로 바꾸어주는 함수.
-  	var PTS = function(_x,_y){
+  	function PTS(_x,_y){
   		return 'translate('+_x+','+_y+')';
   	}
   	// Public Methods
@@ -185,12 +208,12 @@ var JDSubway = (function(){
 	  					.call(nodeEvt);
 	  		el.append('circle').attr('class','subway').attr('r',nodeRadius);
 	  		el.append('text').attr('class','nodeName')
-	  						.attr('x',function(d){ return d.textInfo.x;})
 	  						.attr('y',function(d){ return d.textInfo.y;})
 	  						.style('font-size',function(d){return d.textInfo.textSize+'px';})
 				        	.attr('text-anchor',function(d){return d.textInfo.anchor || 'middle';})
 				        	.attr('transform',function(d){return 'rotate('+(d.textInfo.rotate || 0)+')';})
-	  						.text(function(d){return d.textInfo.text;});
+	  						.each(insertLinebreaks);
+	  						// .text(function(d){return d.textInfo.text;});
 		  	reSorting();
 
 		  	return el;
@@ -204,7 +227,7 @@ var JDSubway = (function(){
 	  					.enter()
 	  					.append('path')
 	  					.attr('d',function(d){
-	  						return linkLine(d.getPoints());
+	  						return linkLine(d.lineTy).getLinePath(d.getPoints());
 	  					})
 	  					.style('stroke',function(d){return lineColorDic[d.lineNo]; })
 	  					.attr('class','link')
@@ -265,13 +288,13 @@ var JDSubway = (function(){
 	  	function setData(data){
 	  		d3.selectAll('.node,.vertex,.link').remove();
 	  		subwayData.nodes.forEach(function(v,i,a){
-	  			drawNode(new _node(v));
+	  			drawNode(new Node(v));
 	  		});
 	  		subwayData.vertexes.forEach(function(v,i,a){
-	  			drawVertex(new _vertex(v));	
+	  			drawVertex(new Vertex(v));	
 	  		});
 	  		subwayData.links.forEach(function(v,i,a){
-	  			drawLink(new _link(v));
+	  			drawLink(new Link(v));
 	  		});
 	  	}
 	  	//export data
@@ -313,7 +336,7 @@ var JDSubway = (function(){
 	  	function checkerEvt(selection){
 	  		selection.on('mousedown.checkerBoard',function(e){
 	  			var point = d3.mouse(board.node());
-	  			drawNode(new _node({x : div10(point[0]),y : div10(point[1])}));
+	  			drawNode(new Node({x : div10(point[0]),y : div10(point[1])}));
 	  		});
 	  		selection.on('mousemove.checkerBoard',function(e){
 	  			console.log('mousemove');
@@ -324,6 +347,7 @@ var JDSubway = (function(){
 	  	}
 	  	//노드 이벤트 리스너
 	  	function nodeEvt(selection){
+	  		
 	  		//마우스 오버 이벤트
 	  		selection.on('mouseover.node',function(e){
 	  			var target = d3.select(this);
@@ -336,15 +360,17 @@ var JDSubway = (function(){
 				{
 					title: '정보 입력',
 					action : function(elm,d,i){
-						d3.inputBox(function(form){
+						d3.helper.inputBox(function(form){
 							// console.log
 							d3.select(elm).datum().textInfo.text = form.name.value;
 							d3.select(elm).datum().id = form.id.value;
-							d3.select(elm).select('.nodeName').text(form.name.value);
+							d3.select(elm).datum().textInfo.textSize = form.textSize.value;
+							d3.select(elm).select('text').each(insertLinebreaks);
 
 							return elm;
 						},
 						[{name:'이름',id:'name'}
+						,{name:'이름크기',id:'textSize'}
 						,{name:'ID',id:'id'}
 						,{name:'설명',id:'description'}
 						])
@@ -354,7 +380,7 @@ var JDSubway = (function(){
 				{
 					title : '노드 삭제',
 					action : function(elm,d,i){
-						d3.select(elm).datum().delete();
+						removeSVG(d3.select(elm));
 					}
 				},
 				{
@@ -390,7 +416,7 @@ var JDSubway = (function(){
 							return PTS(d.x,d.y);
 						});
 						d3.selectAll('.link').attr('d',function(d){
-							return linkLine(d.getPoints());
+							return linkLine(d.lineTy).getLinePath(d.getPoints());
 						});
 					}).on('dragend',function(){console.log('dragend');})
 			);
@@ -420,19 +446,21 @@ var JDSubway = (function(){
 				{
 					title: '정보 입력',
 					action : function(elm,d,i){
-						d3.inputBox(function(form){
+						d3.helper.inputBox(function(form){
 							// console.log
 							d3.select(elm).datum().lineNo = form.lineNo.value;
 							d3.select(elm).style('stroke',function(d){return lineColorDic[d.lineNo]});
 							return elm;
 						},
-						[{name:'호선',id:'lineNo'}]).open();
+						[{name:'호선',id:'lineNo'},
+						{name:'곡선',id:'lineTy'}])
+						.open();
 					}
 				},
 				{
 					title : '링크 삭제',
 					action : function(elm,d,i){
-						d3.select(elm).datum().delete();
+						removeSVG(d3.select(elm));
 					}
 				},
 			];
@@ -474,7 +502,7 @@ var JDSubway = (function(){
 						d3.select(this).attr('cx',function(d){return d.x = div10(point[0]);})
 									   .attr('cy',function(d){return d.y = div10(point[1]);});
 						d3.selectAll('.link').attr('d',function(d){
-							return linkLine(d.getPoints());
+							return linkLine(d.lineTy).getLinePath(d.getPoints());
 						});
 
 					}).on('dragend',function(){
@@ -491,10 +519,10 @@ var JDSubway = (function(){
 			  		var node1 = d3.select('.node.selected');
 			  		var node2 = d3.select('.node.preSelected');
 			  		if(!node1.empty() && !node2.empty()){
-				  		var link = new _link({node1 : node1.datum().uid,node2 : node2.datum().uid});
+				  		var link = new Link({node1 : node1.datum().uid,node2 : node2.datum().uid});
 				  		var el = drawLink(link);
-				  		node1.datum().link.push(el.datum().uid);
-				  		node2.datum().link.push(el.datum().uid);
+				  		node1.datum().link.push(link.uid);
+				  		node2.datum().link.push(link.uid);
 				  	}else{
 	  					alert('두개 이상의 노드를 선택해주세요');
 	  				}
@@ -511,31 +539,31 @@ var JDSubway = (function(){
 					for(var i = 0, max = points.length ; i < max-1 ; i++){
 						var x = (points[i].x + points[i+1].x)/2; 
 						var y = (points[i].y + points[i+1].y)/2;
-						var vertex = new _vertex({x:x,y:y});
+						var vertex = new Vertex({x:x,y:y,link : link.datum().uid});
 	  					var vertexCircle = drawVertex(vertex);
 
-						link.datum().vertex.splice((i+addSize),0,vertexCircle.datum().uid);
+	  					link.datum().vertex.push(vertex.uid);
 						addSize++;
 					}
 	  			}else if(keyCode === 87 ){ // 'w' key
 	  				var node = d3.select('.node.selected').select('.nodeName');
 	  				if(!node.empty()){
-	  					node.attr('y',function(d){return d.textInfo.y-= 1;});
+	  					moveNodeText(node,0,-1);
 	  				}
 	  			}else if(keyCode === 65 ){ // 'a' key
 	  				var node = d3.select('.node.selected').select('.nodeName');
 	  				if(!node.empty()){
-	  					node.attr('x',function(d){return d.textInfo.x-= 1;});
+	  					moveNodeText(node,-1,0);
 	  				}
 	  			}else if(keyCode === 83 ){ // 's' key
 		  			var node = d3.select('.node.selected').select('.nodeName');
 	  				if(!node.empty()){
-	  					node.attr('y',function(d){return d.textInfo.y+= 1;});
+	  					moveNodeText(node,0,1);
 	  				}			
 	  			}else if(keyCode === 68 ){ // 'd' key
 	  				var node = d3.select('.node.selected').select('.nodeName');
 	  				if(!node.empty()){
-	  					node.attr('x',function(d){return d.textInfo.x+= 1;});
+	  					moveNodeText(node,1,0);
 	  				}
 	   			}else if(keyCode === 81 ){ // 'q' key
 	  				var node = d3.select('.node.selected').select('.nodeName');
