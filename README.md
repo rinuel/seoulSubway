@@ -9,7 +9,6 @@
 	- y: Y좌표
 	- info : 추가정보
 	- type : 타입
-	- link : 링크
 	- textInfo : {
 		x: 상대 x좌표
 		y: 상대 y좌표
@@ -22,11 +21,13 @@
 	- uid(key): 키
 	- node1: 노드1
 	- node2: 노드2
-	- vertex : 버텍스
+	- lineNo: 호선 번호
+  	- lineTy: 곡선 유형
 	- type: 타입
 
 ##VERTEX(circle)
 	- uid(key) : 키
+	- link : 링크
 	- x : x좌표
 	- y : y좌표
 	- type: 타입

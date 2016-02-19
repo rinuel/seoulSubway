@@ -155,7 +155,7 @@
 			});
 
 			// this gets executed when a contextmenu event occurs
-			return function(data, index) {
+			return function(data, index) { //event parameters
 				console.log('context');
 				var elm = this;
 

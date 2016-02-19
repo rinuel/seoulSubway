@@ -9,7 +9,8 @@ var JDSubway = (function(){
   	var lineWidth = 20;
   	//링크 라인 path 생성 함수
   	var linkLine = function(lineTy){
-  					return {getLinePath : d3.svg.line()
+  					return {
+  						getLinePath : d3.svg.line()
 		  					.interpolate(lineTy)
 							.x(function(d){return d.x; })
 							.y(function(d){return d.y; })
@@ -39,7 +40,6 @@ var JDSubway = (function(){
   		this.id = param.id === undefined ? 0 : param.id;
   		this.x = param.x === undefined ? 0 : param.x;
   		this.y = param.y === undefined ? 0 : param.y;
-  		this.link = param.link || [];
   		this.info = param.info || {};
   		this.type = param.type || 'node';
   		this.textInfo = param.textInfo || {
@@ -50,7 +50,8 @@ var JDSubway = (function(){
   			text : 'empty',
   			textSize : 15,
   		};
-   	}
+   	};
+
    	//링크 데이터 객체
   	var Link = function(param){
 
@@ -59,10 +60,8 @@ var JDSubway = (function(){
   		this.node2 = param.node2 === undefined ? '' : param.node2;
   		this.lineNo = param.lineNo || 1;
   		this.lineTy = param.lineTy || 'basis';
-  		this.vertex = param.vertex || [];
   		this.type = param.type || 'link';
-  	}
-
+  	};
 	Link.prototype.getPoints = function(){
 		var points = [];
 		//첫째노드 포인트.
@@ -70,9 +69,8 @@ var JDSubway = (function(){
 
 		points.push({x:point.datum().x,y:point.datum().y});
 		//버텍스 포인트 들.
-		this.vertex.forEach(function(v,i,a){
-			point = d3.select('.vertex#vertex'+v)
-			points.push({x:point.datum().x , y:point.datum().y});
+		getVertexesByLinkId(this.uid).forEach(function(v,i,a){
+			points.push({x:v.datum().x , y:v.datum().y});
 		});
 		//목적노드 포인트.
 		point = d3.select('.node#node'+this.node2);
@@ -80,29 +78,54 @@ var JDSubway = (function(){
 
 		return points;	
 	};
-  	//버텍스 데이터 객체
+
+	  	//버텍스 데이터 객체
   	var Vertex = function(param){
   		this.uid = param.uid === undefined ? (getMaxUid('vertex')+1) || 0 : param.uid;
   		// this.link = param.link === undefined ? 0 : param.link;
   		this.x = param.x === undefined ? 0 : param.x;
   		this.y = param.y === undefined ? 0 : param.y;
+  		this.link = param.link === undefined ? 0 : param.link;
+  		this.sn = param.sn === undefined ? 0 : param.sn;
   		this.type = param.type || 'vertex';
-  	}
+  	};
   	// Private Methods
   	///////////////////////////
   	//
+	function getLinkByNodeId(nodeId){
+		var result = 0;
+		d3.selectAll('.link').each(function(d,i){
+			if((nodeId === d.node1) || (nodeId === d.node2)){
+				result = d3.select(this); 
+				return false;
+			}
+		});
+		return result;
+	};
+  	//
+  	function getVertexesByLinkId(linkId){
+  		var list = [];
+		d3.selectAll('.vertex').each(function(d,i){
+			if(linkId === d.link){
+				list.push(d3.select(this));
+			}
+		});
+		list.sort();
+		return list;
+	};
+  	//SVG 삭제
   	function removeSVG(d3_selection){
-  		var type = d3_selection.datum().type;
-  		d3_selection.remove();
-  		if(type === 'node'){
-			d3_selection.datum().link.forEach(function(v,i,a){
-				removeSVG(d3.select('.link#link'+v));
-			});
-  		}else if(type === 'link'){
-			d3_selection.datum().vertex.forEach(function(v,i,a){
-				removeSVG(d3.select('.vertex#vertex'+v));
-			});
-  		}else if(type === 'vertex'){
+  		if(d3_selection){
+  			var type = d3_selection.datum().type;
+	  		if(type === 'node'){
+				removeSVG(getLinkByNodeId(d3_selection.datum().uid));
+	  		}else if(type === 'link'){
+				getVertexesByLinkId(d3_selection.datum().uid).forEach(function(v,i,a){
+					removeSVG(v);
+				});
+	  		}else if(type === 'vertex'){
+	  		}
+	  		d3_selection.remove();
   		}
   	}
   	//
@@ -142,6 +165,73 @@ var JDSubway = (function(){
   	function PTS(_x,_y){
   		return 'translate('+_x+','+_y+')';
   	}
+
+	//노드 그려주는 함수. 
+  	function drawNode(node,container){
+  		var el = container.selectAll('node')
+  					.data([node])
+  					.enter()
+  					.append('g')
+  					.attr({
+  						transform : function(d){return PTS(d.x,d.y);},
+  						id : function(d){return 'node'+d.uid}, class : 'node'
+  					});
+  		el.append('circle').attr('class','subway').attr('r',nodeRadius);
+  		el.append('text').attr('class','nodeName')
+  						.attr('y',function(d){ return d.textInfo.y;})
+			        	.attr('text-anchor',function(d){return d.textInfo.anchor || 'middle';})
+			        	.attr('transform',function(d){return 'rotate('+(d.textInfo.rotate || 0)+')';})
+							.style('font-size',function(d){return d.textInfo.textSize+'px';})
+  						.each(insertLinebreaks);
+  						// .text(function(d){return d.textInfo.text;});
+	  	reSorting();
+	  	return el;
+	}
+	//링크 그려주는 함수.
+  	function drawLink(link,container){
+  		var link = link;
+
+  		var el = container.selectAll('link')
+  					.data([link])
+  					.enter()
+  					.append('path')
+  					.attr({
+  						d : function(d){return linkLine(d.lineTy).getLinePath(d.getPoints());},
+  						id : function(d){return 'link'+d.uid;}, class : 'link',
+  					})
+  					.style('stroke',function(d){return lineColorDic[d.lineNo]; });
+  		reSorting();
+  		return el;
+  	}
+  	//버텍스 그려주는 함수.
+  	function drawVertex(vertex,container){
+  		var vertex = vertex;
+		var vertexCircle = container.selectAll('vertex')
+			.data([vertex])
+			.enter()
+			.append('circle')
+			.attr({
+				cx : function(d){return d.x;}, cy : function(d){return d.y;},
+				r : nodeRadius , id : function(d){return 'vertex'+d.uid;},
+				class : 'vertex'
+			});
+
+		reSorting();
+
+		return vertexCircle;
+  	}
+  	//svg요소 재정렬 해주는 함수.
+	function reSorting(){
+		d3.selectAll('.node,.link,.vertex').sort(function(a,b){
+			if(WEIGHT[a.type] > WEIGHT[b.type])	return 1;
+			else if(WEIGHT[a.type] < WEIGHT[b.type])return -1;
+			else return 0;
+		});
+	}
+  	//줌 처리 리스너
+  	function zoomed(container){
+  		return container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+  	}
   	// Public Methods
   	///////////////////////////
   
@@ -151,7 +241,7 @@ var JDSubway = (function(){
   	var publicMethod = function () {};
   	//에디터 클래스.
   	var Editor = function(selector){
-  		var zoom = d3.behavior.zoom().scaleExtent([1,10]).on('zoom',zoomed);
+  		// var zoom = d3.behavior.zoom().scaleExtent([1,10]).on('zoom',zoomed(board));
   		var svg = d3.select(selector).append('svg').attr('width',screenWidth).attr('height',screenHeight).append('g');//.call(zoom);
   		var board = svg.append('g');
   		var cursor = board.append('rect').attr('width',10).attr('height',10).attr('class','cursor');
@@ -171,88 +261,28 @@ var JDSubway = (function(){
 				.data(d3.range(0,screenHeight,lineWidth))
 				.enter()
 				.append('line')
-				.attr('x1',0)
-				.attr('y1',function(d){return d;})
-				.attr('x2',screenWidth)
-				.attr('y2',function(d){return d;})
-				.attr('class','checkerLine');
+				.attr({
+					x1 : 0, y1 : function(d){return d;},
+					x2 : screenWidth , y2 : function(d){return d;},
+					class : 'checkerLine',
+				});
 
 			container.selectAll('line2')
 				.data(d3.range(0,screenWidth,lineWidth))
 				.enter()
 				.append('line')
-				.attr('x1',function(d){return d;})
-				.attr('y1',0)
-				.attr('x2',function(d){return d;})
-				.attr('y2',screenHeight)
-				.attr('class','checkerLine');
+				.attr({
+					x1 : function(d){return d;}, y1 : 0,
+					x2 : function(d){return d;}, y2 : screenHeight,
+					class : 'checkerLine'
+				});
 
+			//배경 사각화면
 			container.append('rect')
-				.attr('class','backRect')
-				.attr('width',screenWidth)
-				.attr('height',screenHeight)
-				.attr('fill','transparent')
-				.call(checkerEvt);
-	  	}
-	  	//노드 그려주는 함수. 
-	  	function drawNode(node){
-	  		var el = board.selectAll('node')
-	  					.data([node])
-	  					.enter()
-	  					.append('g')
-	  					.attr('transform',function(d){
-	  						return PTS(d.x,d.y);
-	  					})
-	  					.attr('class','node')
-	  					.attr('id',function(d){return 'node'+d.uid})
-	  					.call(nodeEvt);
-	  		el.append('circle').attr('class','subway').attr('r',nodeRadius);
-	  		el.append('text').attr('class','nodeName')
-	  						.attr('y',function(d){ return d.textInfo.y;})
-	  						.style('font-size',function(d){return d.textInfo.textSize+'px';})
-				        	.attr('text-anchor',function(d){return d.textInfo.anchor || 'middle';})
-				        	.attr('transform',function(d){return 'rotate('+(d.textInfo.rotate || 0)+')';})
-	  						.each(insertLinebreaks);
-	  						// .text(function(d){return d.textInfo.text;});
-		  	reSorting();
-
-		  	return el;
-		}
-		//링크 그려주는 함수.
-	  	function drawLink(link){
-	  		var link = link;
-
-	  		var el = board.selectAll('link')
-	  					.data([link])
-	  					.enter()
-	  					.append('path')
-	  					.attr('d',function(d){
-	  						return linkLine(d.lineTy).getLinePath(d.getPoints());
-	  					})
-	  					.style('stroke',function(d){return lineColorDic[d.lineNo]; })
-	  					.attr('class','link')
-	  					.attr('id',function(d){return 'link'+d.uid;})
-	  					.call(linkEvt);
-	  		reSorting();
-	  		return el;
-	  	}
-	  	//버텍스 그려주는 함수.
-	  	function drawVertex(vertex){
-	  		var vertex = vertex;
-			var vertexCircle = board.selectAll('vertex')
-				.data([vertex])
-				.enter()
-				.append('circle')
-				.attr('class','vertex')
-				.attr('id',function(d){return 'vertex'+d.uid;})
-				.attr('cx',function(d){return d.x;})
-				.attr('cy',function(d){return d.y;})
-				.attr('r',nodeRadius)
-				.call(vertexEvt);
-
-			reSorting();
-
-			return vertexCircle;
+				.attr({
+					width : screenWidth , height : screenHeight,
+					fill : 'transparent', class : 'backRect' 
+				}).call(checkerEvt);
 	  	}
 	  	//커서 그리는 함수.
 	  	function drawCursor(x,y,width,height,crossFlag){
@@ -284,17 +314,17 @@ var JDSubway = (function(){
 	  			}
 	  		}
 	  	}
-	  	// 
+	  	//import data 
 	  	function setData(data){
 	  		d3.selectAll('.node,.vertex,.link').remove();
 	  		subwayData.nodes.forEach(function(v,i,a){
-	  			drawNode(new Node(v));
+	  			drawNode(new Node(v),board).call(nodeEvt);
 	  		});
 	  		subwayData.vertexes.forEach(function(v,i,a){
-	  			drawVertex(new Vertex(v));	
+	  			drawVertex(new Vertex(v),board).call(vertexEvt);	
 	  		});
 	  		subwayData.links.forEach(function(v,i,a){
-	  			drawLink(new Link(v));
+	  			drawLink(new Link(v),board).call(linkEvt);
 	  		});
 	  	}
 	  	//export data
@@ -323,20 +353,12 @@ var JDSubway = (function(){
 		    pom.setAttribute('download', 'subwayData.js');
 		    pom.click();
 	  	}
-	  	//svg요소 재정렬 해주는 함수.
-		function reSorting(){
-			d3.selectAll('.node,.link,.vertex').sort(function(a,b){
-				if(WEIGHT[a.type] > WEIGHT[b.type])	return 1;
-				else if(WEIGHT[a.type] < WEIGHT[b.type])return -1;
-				else return 0;
-			});
-		}
 	  	//************* Event Listener *****************
 	  	//체커보드 이벤트 리스너
 	  	function checkerEvt(selection){
 	  		selection.on('mousedown.checkerBoard',function(e){
 	  			var point = d3.mouse(board.node());
-	  			drawNode(new Node({x : div10(point[0]),y : div10(point[1])}));
+	  			drawNode(new Node({x : div10(point[0]),y : div10(point[1])}),board).call(nodeEvt);
 	  		});
 	  		selection.on('mousemove.checkerBoard',function(e){
 	  			console.log('mousemove');
@@ -436,12 +458,12 @@ var JDSubway = (function(){
 	  			target.classed('selected',true);
 	  			//버텍스 클래스 수정
 	  			d3.selectAll('.vertex').classed('hide',true);
-	  			target.datum().vertex.forEach(function(v,i,a){
-	  				var target = d3.select('.vertex#vertex'+v);
-	  				target.classed('hide',false);
+
+	  			getVertexesByLinkId(target.datum().uid).forEach(function(v,i,a){
+	  				v.classed('hide',false);
 	  			});
 	  		});
-	  			  		//context Menu List;
+	  		//context Menu List;
 			var menu = [
 				{
 					title: '정보 입력',
@@ -516,35 +538,9 @@ var JDSubway = (function(){
 	  		console.log(keyCode);
 	  		if(e.type === 'keydown'){
 	  			if(keyCode === 76){ // 'l' key
-			  		var node1 = d3.select('.node.selected');
-			  		var node2 = d3.select('.node.preSelected');
-			  		if(!node1.empty() && !node2.empty()){
-				  		var link = new Link({node1 : node1.datum().uid,node2 : node2.datum().uid});
-				  		var el = drawLink(link);
-				  		node1.datum().link.push(link.uid);
-				  		node2.datum().link.push(link.uid);
-				  	}else{
-	  					alert('두개 이상의 노드를 선택해주세요');
-	  				}
-
+	  				makeLink();
 	  			}else if(keyCode === 86){ // 'v' key
-		  			var link = d3.select('.link.selected');
-					if(link.empty()){
-						alert('선택된 링크가 없습니다.');
-						return false;
-					}
-					var points = link.datum().getPoints();
-					var addSize = 0;
-					var max = 0;
-					for(var i = 0, max = points.length ; i < max-1 ; i++){
-						var x = (points[i].x + points[i+1].x)/2; 
-						var y = (points[i].y + points[i+1].y)/2;
-						var vertex = new Vertex({x:x,y:y,link : link.datum().uid});
-	  					var vertexCircle = drawVertex(vertex);
-
-	  					link.datum().vertex.push(vertex.uid);
-						addSize++;
-					}
+	  				makeVertex();
 	  			}else if(keyCode === 87 ){ // 'w' key
 	  				var node = d3.select('.node.selected').select('.nodeName');
 	  				if(!node.empty()){
@@ -583,15 +579,64 @@ var JDSubway = (function(){
 
   			}
 	  	}
-	  	//줌 처리 리스너
-	  	function zoomed(){
-	  		board.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+	  	//링크 데이터 생성해서 그리기
+	  	function makeLink(){
+	  		var node1 = d3.select('.node.selected');
+	  		var node2 = d3.select('.node.preSelected');
+	  		if(!node1.empty() && !node2.empty()){
+		  		var link = new Link({node1 : node1.datum().uid,node2 : node2.datum().uid});
+		  		var el = drawLink(link,board).call(linkEvt);
+		  	}else{
+				alert('두개 이상의 노드를 선택해주세요');
+			}
 	  	}
+		//버텍스 데이터 생성해서 그리기
+	  	function makeVertex(){
+			var link = d3.select('.link.selected');
+			if(link.empty()){
+				alert('선택된 링크가 없습니다.');
+				return false;
+			}
+			var points = link.datum().getPoints();
+			var length = points.length;
+
+			//버텍스 추가.
+			var x = (points[length-1].x + points[length-2].x)/2;
+			var y = (points[length-1].y + points[length-2].y)/2;
+			drawVertex(new Vertex({x:x, y:y, link : link.datum().uid,sn : length }),board).call(vertexEvt);
+	  	}
+  	}
+
+  	//에디터 클래스.
+  	var viewer = function(selector){
+  		var zoom = d3.behavior.zoom().scaleExtent([1,10]).on('zoom',zoomed(board));
+  		var svg = d3.select(selector).append('svg').attr('width',screenWidth).attr('height',screenHeight).append('g').call(zoom);
+  		var board = svg .append('image')
+					  .attr('xlink:href','images/subwayBack.svg')
+					  .attr('class', 'pico')
+					  .attr('height', screenHeight)
+					  .attr('width', screenWidth);
+		setData();
+	  	//import data 
+	  	function setData(data){
+	  		d3.selectAll('.node,.vertex,.link').remove();
+	  		subwayData.nodes.forEach(function(v,i,a){
+	  			drawNode(new Node(v),board);
+	  		});
+	  		subwayData.vertexes.forEach(function(v,i,a){
+	  			drawVertex(new Vertex(v),board);	
+	  		});
+	  		subwayData.links.forEach(function(v,i,a){
+	  			drawLink(new Link(v),board);
+	  		});
+	  	}
+
   	}
   	// Init
   	///////////////////////////
 
 	return {
-		Editor : Editor
+		Editor : Editor,
+		viewer : viewer,
 	}
 })();
