@@ -16,9 +16,9 @@ var JDSubway = (function(){
 							.y(function(d){return d.y; })
 					};
 	};
-	var lineColorDic = {
+	var lineColorMap = {
 		1 : '#2980B9',
-		2 : '#27AE60',
+		2 : '#2ECC71',
 		3 : '#E67E22',
 		4 : '#3498DB',
 		5 : '#8E44AD',
@@ -37,10 +37,11 @@ var JDSubway = (function(){
 	//노드 데이터 객체
   	var Node = function(param){
   		this.uid = param.uid === undefined ? (getMaxUid('node')+1) || 0: param.uid;
-  		this.id = param.id === undefined ? 0 : param.id;
+  		this.sttnId = param.sttnId === undefined ? 0: param.sttnId;
   		this.x = param.x === undefined ? 0 : param.x;
   		this.y = param.y === undefined ? 0 : param.y;
   		this.info = param.info || {};
+  		this.subType = param.subType === undefined ? 0 : param.subType;
   		this.type = param.type || 'node';
   		this.textInfo = param.textInfo || {
   			x : 0,
@@ -58,6 +59,7 @@ var JDSubway = (function(){
   		this.uid = param.uid === undefined ? (getMaxUid('link')+1) || 0 : param.uid;
   		this.node1 = param.node1 === undefined ? '' : param.node1;
   		this.node2 = param.node2 === undefined ? '' : param.node2;
+  		this.lineId = param.lineId === undefined ? 0 : param.lineId;
   		this.lineNo = param.lineNo || 1;
   		this.lineTy = param.lineTy || 'basis';
   		this.type = param.type || 'link';
@@ -66,7 +68,7 @@ var JDSubway = (function(){
 		var points = [];
 		//첫째노드 포인트.
 		var point = d3.select('.node#node'+this.node1);
-
+                         
 		points.push({x:point.datum().x,y:point.datum().y});
 		//버텍스 포인트 들.
 		getVertexesByLinkId(this.uid).forEach(function(v,i,a){
@@ -88,6 +90,7 @@ var JDSubway = (function(){
   		this.link = param.link === undefined ? 0 : param.link;
   		this.sn = param.sn === undefined ? 0 : param.sn;
   		this.type = param.type || 'vertex';
+
   	};
   	// Private Methods
   	///////////////////////////
@@ -127,6 +130,13 @@ var JDSubway = (function(){
 	  		}
 	  		d3_selection.remove();
   		}
+  	}
+  	//노드 이동.
+  	function moveNode(d3_selection,dx,dy){
+		d3_selection.attr('transform',function(d){
+			d.x += dx; d.y += dy;
+			return PTS(d.x,d.y);
+		});
   	}
   	//
   	function moveNodeText(d3_selection,dx,dy){
@@ -181,7 +191,7 @@ var JDSubway = (function(){
   						.attr('y',function(d){ return d.textInfo.y;})
 			        	.attr('text-anchor',function(d){return d.textInfo.anchor || 'middle';})
 			        	.attr('transform',function(d){return 'rotate('+(d.textInfo.rotate || 0)+')';})
-							.style('font-size',function(d){return d.textInfo.textSize+'px';})
+						.style('font-size',function(d){return d.textInfo.textSize+'px';})
   						.each(insertLinebreaks);
   						// .text(function(d){return d.textInfo.text;});
 	  	reSorting();
@@ -199,7 +209,7 @@ var JDSubway = (function(){
   						d : function(d){return linkLine(d.lineTy).getLinePath(d.getPoints());},
   						id : function(d){return 'link'+d.uid;}, class : 'link',
   					})
-  					.style('stroke',function(d){return lineColorDic[d.lineNo]; });
+  					.style('stroke',function(d){return lineColorMap[d.lineNo]; });
   		reSorting();
   		return el;
   	}
@@ -213,7 +223,7 @@ var JDSubway = (function(){
 			.attr({
 				cx : function(d){return d.x;}, cy : function(d){return d.y;},
 				r : nodeRadius , id : function(d){return 'vertex'+d.uid;},
-				class : 'vertex'
+				class : 'vertex hide'
 			});
 
 		reSorting();
@@ -228,22 +238,18 @@ var JDSubway = (function(){
 			else return 0;
 		});
 	}
-  	//줌 처리 리스너
-  	function zoomed(container){
-  		return container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
-  	}
+
   	// Public Methods
   	///////////////////////////
-  
   	/*
    	* An example public method.
    	*/
   	var publicMethod = function () {};
   	//에디터 클래스.
-  	var Editor = function(selector){
+  	var editor = function(selector){
   		// var zoom = d3.behavior.zoom().scaleExtent([1,10]).on('zoom',zoomed(board));
-  		var svg = d3.select(selector).append('svg').attr('width',screenWidth).attr('height',screenHeight).append('g');//.call(zoom);
-  		var board = svg.append('g');
+  		var svg = d3.select(selector).append('svg').attr('width',screenWidth).attr('height',screenHeight).append('g');
+  		var board = svg.append('g').attr('class','editor');
   		var cursor = board.append('rect').attr('width',10).attr('height',10).attr('class','cursor');
   		var cursor_x = board.append('line').attr('stroke','black').attr('stroke-width',2).attr('class','cursor_x');
   		var cursor_y = board.append('line').attr('stroke','black').attr('stroke-width',2).attr('class','cursor_y');
@@ -378,49 +384,129 @@ var JDSubway = (function(){
 	  				nodeRadius * 2,nodeRadius * 2,true);
 	  		});
 	  		//context Menu List;
-			var menu = [
-				{
-					title: '정보 입력',
-					action : function(elm,d,i){
-						d3.helper.inputBox(function(form){
-							// console.log
-							d3.select(elm).datum().textInfo.text = form.name.value;
-							d3.select(elm).datum().id = form.id.value;
-							d3.select(elm).datum().textInfo.textSize = form.textSize.value;
-							d3.select(elm).select('text').each(insertLinebreaks);
+			// var menu = [
+			// 	{
+			// 		title: '정보 입력',
+			// 		action : function(elm,d,i){
+			// 			d3.helper.inputBox(function(form){
+			// 				// console.log
+			// 				d3.select(elm).datum().textInfo.text = form.name.value;
+			// 				d3.select(elm).datum().id = form.id.value;
+			// 				d3.select(elm).datum().textInfo.textSize = form.textSize.value;
+			// 				d3.select(elm).select('text').each(insertLinebreaks);
 
-							return elm;
-						},
-						[{name:'이름',id:'name'}
-						,{name:'이름크기',id:'textSize'}
-						,{name:'ID',id:'id'}
-						,{name:'설명',id:'description'}
-						])
-						.open();
-					}
-				},
-				{
-					title : '노드 삭제',
-					action : function(elm,d,i){
-						removeSVG(d3.select(elm));
-					}
-				},
-				{
-					title : "데이터 뽑기",
-					action: function(elm,d,i){
-						exportData();
-					}
-				},
-				{
-					title : "데이터 적용하기",
-					action: function(elm,d,i){
-						setData();
-					}
-				}
-			];
+			// 				return elm;
+			// 			},
+			// 			[{name:'이름',id:'name'}
+			// 			,{name:'이름크기',id:'textSize'}
+			// 			,{name:'ID',id:'id'}
+			// 			,{name:'설명',id:'description'}
+			// 			])
+			// 			.open();
+			// 		}
+			// 	},
+			// 	{
+			// 		title : '노드 삭제',
+			// 		action : function(elm,d,i){
+			// 			removeSVG(d3.select(elm));
+			// 		}
+			// 	},
+			// 	{
+			// 		title : "데이터 뽑기",
+			// 		action: function(elm,d,i){
+			// 			exportData();
+			// 		}
+			// 	},
+			// 	{
+			// 		title : "데이터 적용하기",
+			// 		action: function(elm,d,i){
+			// 			setData();
+			// 		}
+			// 	}
+			// ];
 
 	  		//컨텍스트 메뉴이벤트
-	  		selection.on('contextmenu',d3.contextMenu(menu));
+	  		selection.on('contextmenu',function(){
+	  			var target = d3.select(this);
+	  			var pos = d3.mouse(board.node());
+
+	  			var inputBox = d3.select('#nodeInput').style({
+	  				left : pos[0]+'px',
+	  				top : pos[1]+'px',
+	  			}).classed('hide',false);
+
+	  			//데이터 초기화
+	  			inputBox.select('#infoArea').data([1]).html('현재 역을 검색하여 선택해주세요');
+	  			inputBox.select('#searchResult').html('');
+	  			inputBox.select('#stNm').attr('value','');
+
+	  			//데이터 있을경우 데이터 넣어주기
+	  			if(target.datum().subWayList.length > 0){
+	  				var data = target.datum();
+		  			inputBox.select('#infoArea').data([
+		  				{name:data.textInfo.text,
+		  				 id:data.subWayList[0].id,
+		  				 line:data.subWayList[0].line,
+		  				 frcode:data.subWayList[0].frcode,}
+		  			])
+		  			.html(data.textInfo.text);
+	  			}
+
+	  			//검색 버튼 이벤트
+	  			inputBox.select('#searchBtn').on('mousedown',function(d){
+	  				var ultag = inputBox.select('#searchResult').append('ul');
+	  				var unique = {};
+	  				var subList = [];
+	  				subDummy.subList.forEach(function(v,i,a){
+	  					if(unique[v.name] === undefined){
+	  						unique[v.name] = [v];
+	  					}else{
+	  						unique[v.name].push(v);
+	  					} 
+	  				});
+	  				Object.keys(unique).forEach(function(v,i,a){
+	  					var infoList = [];
+	  					unique[v].forEach(function(v,i,a){
+	  						infoList.push({
+	  							id: v.id,
+	  							line: v.line,
+	  							frcode: v.frcode
+	  						});
+	  					});
+	  					subList.push({
+	  						name : v,
+	  						infoList :infoList,
+	  					})
+	  				});
+	  				ultag.selectAll('li').data(subList).enter()
+	  						.append('li').append('a').style('cursor','pointer')
+	  						.on('click',function(data){
+	  							//역 이름 세팅 및 노드 데이터 삽입
+	  							inputBox.select('#infoArea').data([data]).html(data.name);
+	  						}).html(function(d){return d.name});
+	  			});
+
+	  			//확인 버튼 이벤트
+	  			inputBox.select('#okBtn').on('mousedown',function(d){
+	  				var data = inputBox.select('#infoArea').datum();
+	  				target.datum().textInfo.text = data.name;
+	  				target.datum().subWayList = data.infoList;
+	  				target.select('text').each(insertLinebreaks);
+	  				inputBox.classed('hide',true);
+	  			});
+	  			//삭제 버튼 이벤트
+	  			inputBox.select('#delBtn').on('mousedown',function(d){
+	  				removeSVG(target);
+	  				inputBox.classed('hide',true);
+	  			});
+	  			//취소 버튼 이벤트
+	  			inputBox.select('#canBtn').on('mousedown',function(d){
+	  				inputBox.classed('hide',true);
+	  			});
+
+	  			d3.event.preventDefault();
+				d3.event.stopPropagation();
+	  		});
 
 	  		//드래그 설정.
 	  		selection.call(d3.behavior.drag().origin(function(d){return d;})
@@ -471,7 +557,7 @@ var JDSubway = (function(){
 						d3.helper.inputBox(function(form){
 							// console.log
 							d3.select(elm).datum().lineNo = form.lineNo.value;
-							d3.select(elm).style('stroke',function(d){return lineColorDic[d.lineNo]});
+							d3.select(elm).style('stroke',function(d){return lineColorMap[d.lineNo]});
 							return elm;
 						},
 						[{name:'호선',id:'lineNo'},
@@ -574,21 +660,74 @@ var JDSubway = (function(){
 	  			}else if(keyCode === 79 ){ // 'o' key
 	  				var checkers = d3.selectAll('.checkerLine');
 	  				checkers.attr('class','hidden');
+	  			}else if(keyCode === 38 ){ // 'up arrow' key
+	  				var node = d3.select('.node.selected');
+	  				moveNode(node,0,-1);
+	  			}else if(keyCode === 39 ){ // 'right arrow' key
+	  				var node = d3.select('.node.selected');
+	  				moveNode(node,1,0);
+	  			}else if(keyCode === 40 ){ // 'down arrow' key
+	  				var node = d3.select('.node.selected');
+	  				moveNode(node,0,1);
+	  			}else if(keyCode === 37 ){ // 'left arrow' key
+	  				var node = d3.select('.node.selected');
+	  				moveNode(node,-1,0);
 	  			}
+	  			e.preventDefault();
   			}else if(e.type === 'keyup'){
 
   			}
 	  	}
 	  	//링크 데이터 생성해서 그리기
 	  	function makeLink(){
+
 	  		var node1 = d3.select('.node.selected');
 	  		var node2 = d3.select('.node.preSelected');
+
+	  		var lineList = [];
+	  		node1.datum().subWayList.forEach(function(v,i,a){
+	  			node2.datum().subWayList.forEach(function(val,idx,arr){
+	  				if(v.line === val.line){
+	  					lineList.push(v.line);
+	  					return false;
+	  				}
+	  			});
+	  		});
+
+	  		if(lineList.length < 1){
+	  			alert('연결된수 있는 호선이 없습니다.');
+	  			return false;
+	  		}
+
+	  		//input 박스
+	  		var inputBox = d3.select('#linkInput').style({
+	  			left: node1.datum().x+'px',
+	  			top : node1.datum().y+'px',
+	  		}).classed('hide',false);
+	  	
+	  		inputBox.select('#line').html('').selectAll('option')
+	  			.data(lineList).enter().append('option').html(function(d){
+	  				return d;
+	  		});
+
+	  		inputBox.select('#okBtn').on('click',function(d){
+	  			inputBox.classed('hide',true);
+	  		});
+	  		inputBox.select('#delBtn').on('click',function(d){
+	  			inputBox.classed('hide',true);
+	  		});
+	  		inputBox.select('#canBtn').on('click',function(d){
+	  			inputBox.classed('hide',true);
+	  		});
+
+	  		/*
 	  		if(!node1.empty() && !node2.empty()){
 		  		var link = new Link({node1 : node1.datum().uid,node2 : node2.datum().uid});
 		  		var el = drawLink(link,board).call(linkEvt);
 		  	}else{
 				alert('두개 이상의 노드를 선택해주세요');
 			}
+			*/ㅣ
 	  	}
 		//버텍스 데이터 생성해서 그리기
 	  	function makeVertex(){
@@ -609,26 +748,118 @@ var JDSubway = (function(){
 
   	//에디터 클래스.
   	var viewer = function(selector){
-  		var zoom = d3.behavior.zoom().scaleExtent([1,10]).on('zoom',zoomed(board));
+  		//move to front
+	    d3.selection.prototype.moveToFront = function() {  
+	      return this.each(function(){
+	        this.parentNode.appendChild(this);
+	      });
+	    };
+
+  		var zoom = d3.behavior.zoom().scaleExtent([0.5,10]).on('zoom',zoomed);
   		var svg = d3.select(selector).append('svg').attr('width',screenWidth).attr('height',screenHeight).append('g').call(zoom);
-  		var board = svg .append('image')
+		var container = svg.append('g').attr('class','viewer');
+
+  		var image = container.append('image')
 					  .attr('xlink:href','images/subwayBack.svg')
 					  .attr('class', 'pico')
 					  .attr('height', screenHeight)
 					  .attr('width', screenWidth);
 		setData();
+
+		var board = container.append('rect')
+				.attr({
+					width : screenWidth , height : screenHeight,
+					fill : 'none', class : 'backRect hide'  
+				}).style({
+					fill : 'white', opacity : 0.8
+				});
 	  	//import data 
 	  	function setData(data){
 	  		d3.selectAll('.node,.vertex,.link').remove();
 	  		subwayData.nodes.forEach(function(v,i,a){
-	  			drawNode(new Node(v),board);
+	  			drawNode(new Node(v),container).call(nodeEvt_v);
 	  		});
 	  		subwayData.vertexes.forEach(function(v,i,a){
-	  			drawVertex(new Vertex(v),board);	
+	  			v.zindex = 1;
+	  			drawVertex(new Vertex(v),container);	
 	  		});
 	  		subwayData.links.forEach(function(v,i,a){
-	  			drawLink(new Link(v),board);
+	  			v.zindex = 1;
+	  			drawLink(new Link(v),container);
 	  		});
+	  	}
+
+  	 	//줌 처리 리스너
+	  	function zoomed(evt){
+	  		var t = zoom.translate(),
+			    tx = t[0],
+			    ty = t[1];
+
+			//pan 거리 제한두기.
+			// tx = Math.min(tx, screenWidth /2 );
+			// tx = Math.max(tx, 0);
+			// ty = Math.min(ty, screenHeight /2);
+			// ty = Math.max(ty, 0);
+			// zoom.translate([tx, ty]);
+
+			//위치, 스케일 변경
+  			container.attr("transform", "translate(" + tx+','+ty + ")scale(" + d3.event.scale + ")");
+	  	}
+
+	  	//노드 이벤트.
+	  	function nodeEvt_v(selection){
+	  		selection.on('mousedown.node',function(d,i){
+	  			var pos = d3.mouse(svg.node());
+	  			var conPos = d3.mouse(container.node());
+	  			var popover = d3.select('#nodePop').style({
+	  				left:pos[0]+'px',
+	  				top:pos[1]+'px'
+	  			}).classed('hide',false);
+	  			//출발버튼 이벤트
+	  			popover.select('button[data-point="start"]').on('click',function(d){
+	  				var startSymbol = container.selectAll('.startPoint').data([1]);
+	  				startSymbol.enter().append('path').attr({
+	  						d : d3.svg.symbol(),
+	  						class:'startPoint',
+	  				});
+	  				startSymbol.attr('transform', 'translate('+conPos+')');
+	  				popover.classed('hide',true);
+	  			});
+	  			//도착버튼 이벤트
+	  			popover.select('button[data-point="end"]').on('click',function(d){
+	  				var endSymbol = container.selectAll('.endPoint').data([1]);
+	  				endSymbol.enter().append('path').attr({
+	  						d : d3.svg.symbol(),
+	  						class:'endPoint',
+	  				});
+	  				endSymbol.attr('transform', 'translate('+conPos+')');
+	  				popover.classed('hide',true);
+	  				updateLayer();
+	  			});
+	  		});
+	  		// d3.event.stopPropagation();
+	  	}
+	  	//링크 이벤트.
+	  	function linkEvt_v(selection){
+
+	  	}
+	  	//버텍스 이벤트.
+	  	function vertexEvt_v(selection){
+
+	  	}
+	  	//레이어 순서 변경
+	  	function updateLayer(){
+	  		var nodeList = [1,0,45,44,43,42,41,40,51,52];
+	  		var linkList  = [2,3,49,48,47,46,45,62,61];
+
+	  		linkList.forEach(function(v,i,a){
+	  			container.select('#link'+v).moveToFront();
+	  		});
+	  		nodeList.forEach(function(v,i,a){
+	  			container.select('#node'+v).moveToFront();
+	  		});
+	  		container.select('.backRect').classed('hide',false);
+	  		// container.select('#node'+51).moveToFront();
 	  	}
 
   	}
@@ -636,7 +867,7 @@ var JDSubway = (function(){
   	///////////////////////////
 
 	return {
-		Editor : Editor,
+		editor : editor,
 		viewer : viewer,
 	}
 })();

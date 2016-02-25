@@ -4,7 +4,7 @@
 # OBJECT
 ##NODE(circle)
 	- uid(key):  키
-	- id : 정류장 ID
+	- subWayList : 정류장 정보 LIST
 	- x: X좌표
 	- y: Y좌표
 	- info : 추가정보

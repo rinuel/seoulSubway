@@ -7,14 +7,56 @@
 		<link rel="stylesheet" href="css/editor.css">
 	</head>
 	<body>
+		<div id="nodePop" class="popover hide">
+			<button data-point = "start">출발</button>
+			<button data-point = "end">도착</button>
+		</div>
+		<div id="nodeInput" class="popover hide" style="width:300px;height:167px;margin-left:-154px;margin-top:-193px;">
+			<div id="infoArea">현재 역을 검색하여 선택해주세요</div>
+			<div id="searchArea">
+				역이름<input type="text" id="stNm"><button id="searchBtn">검색</button>
+			</div>
+			<div id="searchResult" style="height:70px;overflow: auto;">
+			</div>
+			<div id="btnArea">
+				<button id="okBtn">확인</button>
+				<button id="delBtn">삭제</button>
+				<button id="canBtn">취소</button>
+			</div>
+		</div>
+		<div id="linkInput" class="popover hide" style="width:300px;height:97px;margin-left:-154px;margin-top:-123px;">
+			<div id="inputArea">
+				<div> 호선선택 <select id="line"></select></div>
+				<div> 선 타입  <select></select></div>
+			</div>
+			<div id="btnArea">
+				<button id="okBtn">확인</button>
+				<button id="delBtn">삭제</button>
+				<button id="canBtn">취소</button>
+			</div>
+		</div>
+		<div id="vertexInput" class="popover hide">
+			<div id="btnArea">
+				<button id="delBtn">삭제</button>
+				<button id="canBtn">취소</button>
+			</div>
+		</div>
+		<section>
+			<button>최단경로</button>
+			<button>클릭2</button>
+			<button>클릭3</button>
+			<button>클릭4</button>
+			<button>클릭5</button>
+		</section>
 		<div id="subway"></div>
 		<script src="bower_components/d3/d3.min.js"></script>
+		<script src="js/subwayDummy.js"></script>
 		<script src="subwayData.js"></script>
 		<script src="js/JDSurpport.js"></script>
 		<script src="js/JDSubway.js"></script>
 		<script>
-			var editor = JDSubway.viewer('#subway');
-			
+			// var editor = JDSubway.viewer('#subway');
+			var editor = JDSubway.editor('#subway');
 		</script>
 	</body>
 </html>
