@@ -38,17 +38,26 @@ var JDSubway = (function(){
   	var Node = function(param){
   		this.uid = param.uid === undefined ? (getMaxUid('node')+1) || 0: param.uid;
   		this.sttnId = param.sttnId === undefined ? 0: param.sttnId;
+  		this.line = param.line === undefined ? 0: param.line;
   		this.x = param.x === undefined ? 0 : param.x;
   		this.y = param.y === undefined ? 0 : param.y;
   		this.info = param.info || {};
   		this.subType = param.subType === undefined ? 0 : param.subType;
   		this.type = param.type || 'node';
+  		this.frcode = param.frcode || {
+  			x : 0,
+  			y : -30,
+  			anchor : 'middle',
+  			rotate : 0,
+  			text : 'frcode',
+  			textSize : 15,
+  		};
   		this.textInfo = param.textInfo || {
   			x : 0,
   			y : -10,
   			anchor : 'middle',
   			rotate : 0,
-  			text : 'empty',
+  			text : 'name',
   			textSize : 15,
   		};
    	};
@@ -59,7 +68,7 @@ var JDSubway = (function(){
   		this.uid = param.uid === undefined ? (getMaxUid('link')+1) || 0 : param.uid;
   		this.node1 = param.node1 === undefined ? '' : param.node1;
   		this.node2 = param.node2 === undefined ? '' : param.node2;
-  		this.lineId = param.lineId === undefined ? 0 : param.lineId;
+  		this.line = param.line === undefined ? 0 : param.line;
   		this.lineNo = param.lineNo || 1;
   		this.lineTy = param.lineTy || 'basis';
   		this.type = param.type || 'link';
@@ -383,47 +392,6 @@ var JDSubway = (function(){
 	  			drawCursor(target.datum().x - nodeRadius,target.datum().y - nodeRadius,
 	  				nodeRadius * 2,nodeRadius * 2,true);
 	  		});
-	  		//context Menu List;
-			// var menu = [
-			// 	{
-			// 		title: '정보 입력',
-			// 		action : function(elm,d,i){
-			// 			d3.helper.inputBox(function(form){
-			// 				// console.log
-			// 				d3.select(elm).datum().textInfo.text = form.name.value;
-			// 				d3.select(elm).datum().id = form.id.value;
-			// 				d3.select(elm).datum().textInfo.textSize = form.textSize.value;
-			// 				d3.select(elm).select('text').each(insertLinebreaks);
-
-			// 				return elm;
-			// 			},
-			// 			[{name:'이름',id:'name'}
-			// 			,{name:'이름크기',id:'textSize'}
-			// 			,{name:'ID',id:'id'}
-			// 			,{name:'설명',id:'description'}
-			// 			])
-			// 			.open();
-			// 		}
-			// 	},
-			// 	{
-			// 		title : '노드 삭제',
-			// 		action : function(elm,d,i){
-			// 			removeSVG(d3.select(elm));
-			// 		}
-			// 	},
-			// 	{
-			// 		title : "데이터 뽑기",
-			// 		action: function(elm,d,i){
-			// 			exportData();
-			// 		}
-			// 	},
-			// 	{
-			// 		title : "데이터 적용하기",
-			// 		action: function(elm,d,i){
-			// 			setData();
-			// 		}
-			// 	}
-			// ];
 
 	  		//컨텍스트 메뉴이벤트
 	  		selection.on('contextmenu',function(){
@@ -441,13 +409,13 @@ var JDSubway = (function(){
 	  			inputBox.select('#stNm').attr('value','');
 
 	  			//데이터 있을경우 데이터 넣어주기
-	  			if(target.datum().subWayList.length > 0){
+	  			if(target.datum().sttnId){
 	  				var data = target.datum();
 		  			inputBox.select('#infoArea').data([
 		  				{name:data.textInfo.text,
-		  				 id:data.subWayList[0].id,
-		  				 line:data.subWayList[0].line,
-		  				 frcode:data.subWayList[0].frcode,}
+		  				 id:data.sttnId,
+		  				 line:data.line,
+		  				 frcode:data.frcode.text,}
 		  			])
 		  			.html(data.textInfo.text);
 	  			}
@@ -455,42 +423,22 @@ var JDSubway = (function(){
 	  			//검색 버튼 이벤트
 	  			inputBox.select('#searchBtn').on('mousedown',function(d){
 	  				var ultag = inputBox.select('#searchResult').append('ul');
-	  				var unique = {};
-	  				var subList = [];
-	  				subDummy.subList.forEach(function(v,i,a){
-	  					if(unique[v.name] === undefined){
-	  						unique[v.name] = [v];
-	  					}else{
-	  						unique[v.name].push(v);
-	  					} 
-	  				});
-	  				Object.keys(unique).forEach(function(v,i,a){
-	  					var infoList = [];
-	  					unique[v].forEach(function(v,i,a){
-	  						infoList.push({
-	  							id: v.id,
-	  							line: v.line,
-	  							frcode: v.frcode
-	  						});
-	  					});
-	  					subList.push({
-	  						name : v,
-	  						infoList :infoList,
-	  					})
-	  				});
-	  				ultag.selectAll('li').data(subList).enter()
+
+	  				ultag.selectAll('li').data(subDummy.subList).enter()
 	  						.append('li').append('a').style('cursor','pointer')
 	  						.on('click',function(data){
 	  							//역 이름 세팅 및 노드 데이터 삽입
 	  							inputBox.select('#infoArea').data([data]).html(data.name);
-	  						}).html(function(d){return d.name});
+	  						}).html(function(d){return d.name+'('+d.line+')';});
 	  			});
 
 	  			//확인 버튼 이벤트
 	  			inputBox.select('#okBtn').on('mousedown',function(d){
 	  				var data = inputBox.select('#infoArea').datum();
 	  				target.datum().textInfo.text = data.name;
-	  				target.datum().subWayList = data.infoList;
+	  				target.datum().frcode.text = data.frcode;
+	  				target.datum().sttnId = data.id;
+	  				target.datum().line = data.line;
 	  				target.select('text').each(insertLinebreaks);
 	  				inputBox.classed('hide',true);
 	  			});
@@ -673,7 +621,6 @@ var JDSubway = (function(){
 	  				var node = d3.select('.node.selected');
 	  				moveNode(node,-1,0);
 	  			}
-	  			e.preventDefault();
   			}else if(e.type === 'keyup'){
 
   			}
@@ -727,7 +674,7 @@ var JDSubway = (function(){
 		  	}else{
 				alert('두개 이상의 노드를 선택해주세요');
 			}
-			*/ㅣ
+			*/
 	  	}
 		//버텍스 데이터 생성해서 그리기
 	  	function makeVertex(){

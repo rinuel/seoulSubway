@@ -1,7 +1,7 @@
 var subDummy = {
 	subList : [
-		{name:'충정로',id:1002000201,line: 10021002 , frcode : 123},
-		{name:'시청',  id:1002000202,line: 10021002 , frcode : 123},
+		{name:'충정로',id:1002000201,line: 1002 , frcode : 123},
+		{name:'시청',  id:1002000202,line: 1002 , frcode : 123},
 		{name:'을지로입구', id:1002000203,line: 1002 , frcode : 123},
 		{name:'을지로3가',  id:1002000204,line: 1002 , frcode : 123},
 		{name:'을지로4가',  id:1002000205,line: 1002 , frcode : 123},
