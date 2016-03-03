@@ -1,0 +1,14 @@
+{
+  "name": "JDWidgets",
+  "homepage": "https://github.com/rinuel/customWidget",
+  "_release": "d0ddcd2ed3",
+  "_resolution": {
+    "type": "branch",
+    "branch": "master",
+    "commit": "d0ddcd2ed3c55f5f7202db4189930bccfab327bc"
+  },
+  "_source": "git://github.com/rinuel/customWidget.git",
+  "_target": "*",
+  "_originalSource": "JDWidgets",
+  "_direct": true
+}

@@ -33,6 +33,13 @@
 	stroke: none;
 	cursor: pointer;
 }
+/* rp node */
+.rpnode ellipse{
+	fill:transparent;
+	stroke:aquamarine;
+	storke-width:2px;
+	pointer-events: none;
+}
 
 /* link */
 .editor .link{

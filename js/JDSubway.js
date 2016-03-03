@@ -7,24 +7,31 @@ var JDSubway = (function(){
   	var nodeRadius = 5;
   	var cursorFlag = true;
   	var lineWidth = 20;
+  	//custom alert이 있으면 선언
+  	var acwidgets = null;
+  	try{
+  		acwidgets = ACWidgets.init();
+  	}catch(err){
+  		console.log(err);
+  	}
   	//링크 라인 path 생성 함수
   	var linkLine = function(lineTy){
-  					return {
-  						getLinePath : d3.svg.line()
-		  					.interpolate(lineTy)
-							.x(function(d){return d.x; })
-							.y(function(d){return d.y; })
-					};
+		return {
+			getLinePath : d3.svg.line()
+				.interpolate(lineTy)
+			.x(function(d){return d.x; })
+			.y(function(d){return d.y; })
+		};
 	};
 	var lineColorMap = {
-		1 : '#2980B9',
-		2 : '#2ECC71',
-		3 : '#E67E22',
-		4 : '#3498DB',
-		5 : '#8E44AD',
-		6 : '#D35400',
-		7 : '#C0392B',
-		8 : '#E74C3C',
+		1001 : '#2980B9',
+		1002 : '#2ECC71',
+		1003 : '#E67E22',
+		1004 : '#3498DB',
+		1005 : '#8E44AD',
+		1006 : '#D35400',
+		1007 : '#C0392B',
+		1008 : '#E74C3C',
 	};
 
 	//라인 가중치 가중치 크기에따라 맨위로 올라오는 요소가 달라짐
@@ -44,6 +51,7 @@ var JDSubway = (function(){
   		this.info = param.info || {};
   		this.subType = param.subType === undefined ? 0 : param.subType;
   		this.type = param.type || 'node';
+  		this.rpId = param.rpId === undefined ? null : param.rpId;
   		this.frcode = param.frcode || {
   			x : 0,
   			y : -30,
@@ -62,6 +70,22 @@ var JDSubway = (function(){
   		};
    	};
 
+   	var RPNode = function(param){
+   		this.rpId = param.rpId === undefined ? 0 : param.rpId;
+  		this.x = param.x === undefined ? 0 : param.x;
+  		this.y = param.y === undefined ? 0 : param.y;
+  		this.width = param.width === undefined ? 0 : param.width;
+  		this.height = param.height === undefined ? 0 : param.height;
+  		this.type = param.type || 'rpnode';
+  		this.textInfo = param.textInfo || {
+  			x : 0,
+  			y : -10,
+  			anchor : 'middle',
+  			rotate : 0,
+  			text : 'name',
+  			textSize : 15,
+  		};
+   	};
    	//링크 데이터 객체
   	var Link = function(param){
 
@@ -69,7 +93,6 @@ var JDSubway = (function(){
   		this.node1 = param.node1 === undefined ? '' : param.node1;
   		this.node2 = param.node2 === undefined ? '' : param.node2;
   		this.line = param.line === undefined ? 0 : param.line;
-  		this.lineNo = param.lineNo || 1;
   		this.lineTy = param.lineTy || 'basis';
   		this.type = param.type || 'link';
   	};
@@ -99,8 +122,8 @@ var JDSubway = (function(){
   		this.link = param.link === undefined ? 0 : param.link;
   		this.sn = param.sn === undefined ? 0 : param.sn;
   		this.type = param.type || 'vertex';
-
   	};
+
   	// Private Methods
   	///////////////////////////
   	//
@@ -150,10 +173,34 @@ var JDSubway = (function(){
   	//
   	function moveNodeText(d3_selection,dx,dy){
   		//좌표이동.
-  		d3_selection
-  				.attr('y',function(d){return d.textInfo.y += dy;})
-  				.selectAll('tspan')
-  		  		.attr('x',function(d){ return d.textInfo.x += dx;});
+  		var rpId = d3_selection.datum().rpId;
+		var duplNode = d3.selectAll('.node').filter(function(d){
+			return d.rpId === rpId && rpId !== null;
+		});
+		if(duplNode.size() >= 2){
+			d3.select('#rpnode'+rpId).select('text')
+				.attr('y',function(d){return d.textInfo.y += dy;})
+		  		.attr('x',function(d){ return d.textInfo.x += dx;});
+		}else{
+	  		d3_selection
+				.attr('y',function(d){return d.textInfo.y += dy;})
+				.selectAll('tspan')
+		  		.attr('x',function(d){ return d.textInfo.x += dx;});
+		}
+  	}
+  	function rotateNodeText(d3_selection,dx){
+  		//좌표이동.
+  		var rpId = d3_selection.datum().rpId;
+		var duplNode = d3.selectAll('.node').filter(function(d){
+			return d.rpId === rpId && rpId !== null;
+		});
+		if(duplNode.size() >= 2){
+			d3.select('#rpnode'+rpId).select('text')
+				.attr('transform',function(d){return 'rotate('+(d.textInfo.rotate += dx)+')';});
+		}else{
+	  		d3_selection
+				.attr('transform',function(d){return 'rotate('+(d.textInfo.rotate += dx)+')';});
+		}
   	}
   	//text 라인 나누기.
   	function insertLinebreaks (d) {
@@ -206,10 +253,30 @@ var JDSubway = (function(){
 	  	reSorting();
 	  	return el;
 	}
+		//노드 그려주는 함수. 
+  	function drawRpNode(rpNode,container){
+  		var el = container.selectAll('rpnode').data([rpNode]).enter()
+					.append('g').attr({
+						transform : function(d){return PTS(d.x,d.y)},
+						id : function(d){return 'rpnode'+d.rpId},
+						class : 'rpnode',
+					});
+		el.append('ellipse').attr({
+				rx:function(d){return d.width},		// 중심 너비
+				ry:function(d){return d.height},	// 중심 높이
+		});
+		el.append('text').attr('class','nodeName')
+			.attr('y',function(d){ return d.textInfo.y;})
+	    	.attr('text-anchor',function(d){return d.textInfo.anchor || 'middle';})
+	    	.attr('transform',function(d){return 'rotate('+(d.textInfo.rotate || 0)+')';})
+			.style('font-size',function(d){return d.textInfo.textSize+'px';})
+			.text(function(d){return d.textInfo.text});
+	  	reSorting();
+	  	return el;
+	}
 	//링크 그려주는 함수.
   	function drawLink(link,container){
   		var link = link;
-
   		var el = container.selectAll('link')
   					.data([link])
   					.enter()
@@ -218,7 +285,7 @@ var JDSubway = (function(){
   						d : function(d){return linkLine(d.lineTy).getLinePath(d.getPoints());},
   						id : function(d){return 'link'+d.uid;}, class : 'link',
   					})
-  					.style('stroke',function(d){return lineColorMap[d.lineNo]; });
+  					.style('stroke',function(d){return lineColorMap[d.line]; });
   		reSorting();
   		return el;
   	}
@@ -232,7 +299,7 @@ var JDSubway = (function(){
 			.attr({
 				cx : function(d){return d.x;}, cy : function(d){return d.y;},
 				r : nodeRadius , id : function(d){return 'vertex'+d.uid;},
-				class : 'vertex hide'
+				class : 'vertex'
 			});
 
 		reSorting();
@@ -329,6 +396,16 @@ var JDSubway = (function(){
 	  			}
 	  		}
 	  	}
+	  	function checkNodeDuplicate(x,y){
+	  		var target = false;
+	  		board.selectAll('.node').each(function(d,i){
+	  			if(d.x === x && d.y === y){
+	  				target = d3.select(this);
+	  				return false;
+	  			}
+	  		});
+	  		return target;
+	  	}
 	  	//import data 
 	  	function setData(data){
 	  		d3.selectAll('.node,.vertex,.link').remove();
@@ -373,7 +450,15 @@ var JDSubway = (function(){
 	  	function checkerEvt(selection){
 	  		selection.on('mousedown.checkerBoard',function(e){
 	  			var point = d3.mouse(board.node());
-	  			drawNode(new Node({x : div10(point[0]),y : div10(point[1])}),board).call(nodeEvt);
+	  			var x = div10(point[0]),
+	  				y = div10(point[1]);
+	  			var target = checkNodeDuplicate(x,y);
+	  			if(!target){
+	  				var el = drawNode(new Node({x : x,y : y}),board).call(nodeEvt);
+	  				selectNode(el);
+	  			}else{
+	  				selectNode(target);
+	  			}
 	  		});
 	  		selection.on('mousemove.checkerBoard',function(e){
 	  			console.log('mousemove');
@@ -385,7 +470,7 @@ var JDSubway = (function(){
 	  	//노드 이벤트 리스너
 	  	function nodeEvt(selection){
 	  		
-	  		//마우스 오버 이벤트
+	  		//마우스 오버 이벤트	
 	  		selection.on('mouseover.node',function(e){
 	  			var target = d3.select(this);
 	  			//커서 그리기ㅣ
@@ -412,10 +497,11 @@ var JDSubway = (function(){
 	  			if(target.datum().sttnId){
 	  				var data = target.datum();
 		  			inputBox.select('#infoArea').data([
-		  				{name:data.textInfo.text,
-		  				 id:data.sttnId,
-		  				 line:data.line,
-		  				 frcode:data.frcode.text,}
+		  				{name  : data.textInfo.text,
+		  				 id    : data.sttnId,
+		  				 line  : data.line,
+		  				 frcode: data.frcode.text,
+		  				 rpId  : data.rpId}
 		  			])
 		  			.html(data.textInfo.text);
 	  			}
@@ -439,6 +525,47 @@ var JDSubway = (function(){
 	  				target.datum().frcode.text = data.frcode;
 	  				target.datum().sttnId = data.id;
 	  				target.datum().line = data.line;
+	  				target.datum().rpId = data.rpId;
+
+	  				//대표노드 갯수 확인
+	  				var xArray= [],yArray=[];
+					var duplNode = d3.selectAll('.node').filter(function(d){
+						return d.rpId === data.rpId && data.rpId !== null;
+	  				});
+	  				duplNode.each(function(d){
+	  					xArray.push(d.x);
+	  					yArray.push(d.y);
+	  				});
+	  				if(duplNode.size() >= 2){
+	  					var rpId = d3.select(duplNode[0][0]).datum().rpId;
+	  					var rpNode_selection = d3.select('#rpnode'+rpId);
+						//텍스트 노드 사라지게
+	  					duplNode.select('text').classed('hide',true);
+	  					var minX = d3.min(xArray),
+	  						maxX = d3.max(xArray),
+	  						minY = d3.min(yArray),
+	  						maxY = d3.max(yArray);
+	  					var one = d3.select(duplNode[0][0]);
+	  					var xPos = Math.abs((minX + maxX)/2);
+	  					var yPos = Math.abs((minY + maxY)/2);
+	  					var width = maxX - xPos + 10;
+	  					width = width === 0 ? 20 : width;
+	  					var height = maxY - yPos + 10;
+	  					height = height === 0 ? 20 : height;
+
+	  					if(rpNode_selection.empty()){
+		  					var rpnode = new RPNode({rpId:rpId,x:xPos,y:yPos,width:width,height:height});
+		  					rpnode.textInfo.text = one.datum().textInfo.text;
+		  					drawRpNode(rpnode,board);
+	  					}else{
+	  						rpNode_selection.attr({
+	  							transform : function(d){return PTS(xPos,yPos);},
+	  						}).select('ellipse').attr({
+	  							rx:function(d){return (width);},
+	  							ry:function(d){return (height);},
+	  						});
+	  					}
+	  				}
 	  				target.select('text').each(insertLinebreaks);
 	  				inputBox.classed('hide',true);
 	  			});
@@ -459,21 +586,48 @@ var JDSubway = (function(){
 	  		//드래그 설정.
 	  		selection.call(d3.behavior.drag().origin(function(d){return d;})
 					.on('dragstart',function(){
-						d3.select('.node.preSelected').classed('preSelected',false);
-						d3.select('.node.selected').classed('preSelected',true);
-						d3.select('.selected').classed('selected',false);
-						d3.select(this).classed('selected',true);
-						d3.selectAll('.vertex').classed('hide',true);
+						selectNode(d3.select(this));
 					})
 					.on('drag',function(){
 						var point = d3.mouse(board.node());
-						d3.select(this).attr('transform',function(d){
+						var target = d3.select(this);
+						var rpnode_selection = d3.select('#rpnode'+target.datum().rpId);
+						target.attr('transform',function(d){
 							d.x = div10(point[0]); d.y = div10(point[1]);
 							return PTS(d.x,d.y);
 						});
 						d3.selectAll('.link').attr('d',function(d){
 							return linkLine(d.lineTy).getLinePath(d.getPoints());
 						});
+
+						if(!rpnode_selection.empty()){
+							var duplNode = d3.selectAll('.node').filter(function(d){
+								return d.rpId === rpnode_selection.datum().rpId;
+			  				});
+			  				var xArray = [],yArray=[];
+			  			    duplNode.each(function(d){
+			  					xArray.push(d.x);
+			  					yArray.push(d.y);
+		  					});
+		  					var minX = d3.min(xArray),
+		  						maxX = d3.max(xArray),
+		  						minY = d3.min(yArray),
+		  						maxY = d3.max(yArray);
+			  				var xPos = Math.abs((minX + maxX)/2);
+		  					var yPos = Math.abs((minY + maxY)/2);
+		  					var width = maxX - xPos + 10;
+		  					width = width === 0 ? 20 : width;
+		  					var height = maxY - yPos + 10;
+		  					height = height === 0 ? 20 : height;
+
+		  					rpnode_selection.attr({
+	  							transform : function(d){return PTS(xPos,yPos);},
+	  						}).select('ellipse').attr({
+	  							rx:function(d){return (width);},
+	  							ry:function(d){return (height);},
+	  						});
+	  					}
+
 					}).on('dragend',function(){console.log('dragend');})
 			);
 
@@ -481,6 +635,13 @@ var JDSubway = (function(){
 			selection.call(d3.helper.tooltip().style({color:'blue',background:'white'}).text(function(d){
 				return 'id:'+d.uid+' - '+d.x+','+d.y;
 			}));
+	  	}
+	  	function selectNode(d3_selection){
+			d3.select('.node.preSelected').classed('preSelected',false);
+			d3.select('.node.selected').classed('preSelected',true);
+			d3.select('.selected').classed('selected',false);
+			d3_selection.classed('selected',true);
+			d3.selectAll('.vertex').classed('hide',true);
 	  	}
 	  	//링크 이벤트 리스너
 	  	function linkEvt(selection){
@@ -497,30 +658,44 @@ var JDSubway = (function(){
 	  				v.classed('hide',false);
 	  			});
 	  		});
-	  		//context Menu List;
-			var menu = [
-				{
-					title: '정보 입력',
-					action : function(elm,d,i){
-						d3.helper.inputBox(function(form){
-							// console.log
-							d3.select(elm).datum().lineNo = form.lineNo.value;
-							d3.select(elm).style('stroke',function(d){return lineColorMap[d.lineNo]});
-							return elm;
-						},
-						[{name:'호선',id:'lineNo'},
-						{name:'곡선',id:'lineTy'}])
-						.open();
-					}
-				},
-				{
-					title : '링크 삭제',
-					action : function(elm,d,i){
-						removeSVG(d3.select(elm));
-					}
-				},
-			];
-	  		selection.on('contextmenu',d3.contextMenu(menu));
+
+	  		//우클릭 이벤트
+	  		selection.on('contextmenu',function(){
+	  			var target = d3.select(this);
+	  			var lineList = ['linear','step-before','basis','cardinal','monotone'];
+	  			var pos = d3.mouse(board.node());
+
+	  			//input 박스
+		  		var inputBox = d3.select('#linkInput').style({
+		  			left: pos[0]+'px',
+		  			top : pos[1]+'px',
+		  		}).classed('hide',false);
+		  		
+		  		inputBox.select('#lineTy').html('').selectAll('option')
+		  			.data(lineList).enter().append('option').html(function(d){
+		  				return d;
+		  		}).filter(function(d,i){return target.datum().lineTy === d}).attr('selected',true);
+
+		  		inputBox.select('#okBtn').on('click',function(d){
+		  			target.datum().lineTy = inputBox.select('#lineTy')[0][0].value;
+		  			//link 모양 변경 적용
+		  			board.selectAll('.link')
+  							.attr('d',function(d){return linkLine(d.lineTy).getLinePath(d.getPoints());});
+		  			inputBox.classed('hide',true);
+		  		});
+		  		inputBox.select('#delBtn').on('click',function(d){
+		  			removeSVG(target);
+		  			inputBox.classed('hide',true);
+		  		});
+		  		inputBox.select('#canBtn').on('click',function(d){
+		  			inputBox.classed('hide',true);
+		  		});
+
+	  			d3.event.preventDefault();
+				d3.event.stopPropagation();
+	  		});
+
+	  		//마우스 오버 이벤트
 	  		selection.on('mouseover.link',function(e){
 	  			var target = d3.select(this);
 	  			var points = target.datum().getPoints();
@@ -534,6 +709,7 @@ var JDSubway = (function(){
 	  					   yMax - yMin > 0 ? yMax-yMin : 20);
 	  		});
 	  	}
+
 	  	//버텍스 이벤트 리스너
 	  	function vertexEvt(selection){
 	  		selection.on('mouseover.node',function(e){
@@ -598,12 +774,12 @@ var JDSubway = (function(){
 	   			}else if(keyCode === 81 ){ // 'q' key
 	  				var node = d3.select('.node.selected').select('.nodeName');
 	  				if(!node.empty()){
-	  					node.attr('transform',function(d){return 'rotate('+(d.textInfo.rotate -= 1)+')';});
+	  					rotateNodeText(node,-1);
 	  				}
 	  			}else if(keyCode === 69 ){ // 'e' key
 	  				var node = d3.select('.node.selected').select('.nodeName');
 	  				if(!node.empty()){
-	  					node.attr('transform',function(d){return 'rotate('+(d.textInfo.rotate += 1)+')';});
+	  					rotateNodeText(node,+1);
 	  				}
 	  			}else if(keyCode === 79 ){ // 'o' key
 	  				var checkers = d3.selectAll('.checkerLine');
@@ -631,49 +807,19 @@ var JDSubway = (function(){
 	  		var node1 = d3.select('.node.selected');
 	  		var node2 = d3.select('.node.preSelected');
 
-	  		var lineList = [];
-	  		node1.datum().subWayList.forEach(function(v,i,a){
-	  			node2.datum().subWayList.forEach(function(val,idx,arr){
-	  				if(v.line === val.line){
-	  					lineList.push(v.line);
-	  					return false;
-	  				}
-	  			});
-	  		});
-
-	  		if(lineList.length < 1){
-	  			alert('연결된수 있는 호선이 없습니다.');
-	  			return false;
-	  		}
-
-	  		//input 박스
-	  		var inputBox = d3.select('#linkInput').style({
-	  			left: node1.datum().x+'px',
-	  			top : node1.datum().y+'px',
-	  		}).classed('hide',false);
-	  	
-	  		inputBox.select('#line').html('').selectAll('option')
-	  			.data(lineList).enter().append('option').html(function(d){
-	  				return d;
-	  		});
-
-	  		inputBox.select('#okBtn').on('click',function(d){
-	  			inputBox.classed('hide',true);
-	  		});
-	  		inputBox.select('#delBtn').on('click',function(d){
-	  			inputBox.classed('hide',true);
-	  		});
-	  		inputBox.select('#canBtn').on('click',function(d){
-	  			inputBox.classed('hide',true);
-	  		});
-
-	  		/*
-	  		if(!node1.empty() && !node2.empty()){
-		  		var link = new Link({node1 : node1.datum().uid,node2 : node2.datum().uid});
-		  		var el = drawLink(link,board).call(linkEvt);
+  			if(!node1.empty() && !node2.empty()){
+  				if(node1.datum().line != node2.datum().line){
+  					alert('같은 호선이 아닙니다.');
+  				}else{
+			  		var link = new Link({
+			  			node1 : node1.datum().uid,
+			  			node2 : node2.datum().uid});
+			  		var el = drawLink(link,board).call(linkEvt);
+			  	}
 		  	}else{
 				alert('두개 이상의 노드를 선택해주세요');
 			}
+	  		/*
 			*/
 	  	}
 		//버텍스 데이터 생성해서 그리기

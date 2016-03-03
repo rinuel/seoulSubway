@@ -15,7 +15,8 @@
     "d3": "~3.5.12",
     "jquery": "~2.2.0",
     "jquery-ui": "~1.11.4",
-    "d3-context-menu": "*"
+    "d3-context-menu": "*",
+    "JDWidgets": "*"
   },
   "devDependencies": {
     "d3": "~3.5.12"

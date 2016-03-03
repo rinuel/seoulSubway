@@ -5,6 +5,7 @@
 		<meta charset="utf-8">
 		<title></title>
 		<link rel="stylesheet" href="css/editor.css">
+		<link rel="stylesheet" href="bower_components/JDWidgets/css/widgets.css">
 	</head>
 	<body>
 		<div id="nodePop" class="popover hide">
@@ -24,10 +25,9 @@
 				<button id="canBtn">취소</button>
 			</div>
 		</div>
-		<div id="linkInput" class="popover hide" style="width:300px;height:97px;margin-left:-154px;margin-top:-123px;">
+		<div id="linkInput" class="popover hide" style="width:300px;height:74px;margin-left:-154px;margin-top:-93px;">
 			<div id="inputArea">
-				<div> 호선선택 <select id="line"></select></div>
-				<div> 선 타입  <select></select></div>
+				<div> 선 타입  <select id="lineTy"></select></div>
 			</div>
 			<div id="btnArea">
 				<button id="okBtn">확인</button>
@@ -50,6 +50,7 @@
 		</section>
 		<div id="subway"></div>
 		<script src="bower_components/d3/d3.min.js"></script>
+		<script src="bower_components/JDWidgets/js/widgets.js"></script>
 		<script src="js/subwayDummy.js"></script>
 		<script src="subwayData.js"></script>
 		<script src="js/JDSurpport.js"></script>

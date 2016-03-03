@@ -1,0 +1,43 @@
+<!DOCTPYE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet"href="css/widgets.css">
+</head>
+<body>
+	<p id="post_1">
+		Today is a lovely day ....
+		<button id="alert">alert</button>
+	</p>
+	<p id="post_2">
+		I like pickless ....
+		<button id="confirm">post2</button>
+	</p>
+	<script type="text/javascript" src="js/widgets.js"></script>
+	<script>
+	window.onload = function(){
+		var acwidgets = ACWidgets.init();
+
+		document.getElementById('alert').addEventListener('click',function(evt){
+			// acwidgets.alert.head.innerHTML = "얼러트 헤드!";
+			acwidgets.alert.render({
+				head : '얼럿트 헤드',
+				dialog : '확인 버튼을 눌러주세요',
+				okCallBack : function(){console.log('okCallBack');},
+			});
+		});
+
+		document.getElementById('confirm').addEventListener('click',function(evt){
+			acwidgets.confirm.render({
+				head : '컨펌 헤드!',
+				dialog : '확인이나 취소 버튼을 눌러주세요',
+				okCallBack : function(){console.log('okCallBack');},
+				cancelCallBack : function(){console.log('cancelCallBack');}
+			});	
+		});
+
+	}
+	</script>
+</body>
+</html>
+

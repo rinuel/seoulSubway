@@ -24,6 +24,16 @@
 		rotate : 회전각도
 		text : 텍스트 
 	}
+##RPNODE(ellipse)
+	- uid(key):  키
+	- rpid :대표역 키
+	- textInfo : {
+		x: 상대 x좌표
+		y: 상대 y좌표
+		anchor : 'middle',
+		rotate : 회전각도
+		text : 텍스트 
+	}	
 
 ##LINK(path)
 	- uid(key): 키
